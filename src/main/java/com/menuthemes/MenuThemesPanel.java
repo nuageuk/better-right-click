@@ -36,6 +36,7 @@ import javax.swing.JPopupMenu;
 import javax.swing.JSpinner;
 import javax.swing.JTextField;
 import javax.swing.SpinnerNumberModel;
+import javax.swing.SwingUtilities;
 import javax.swing.event.PopupMenuEvent;
 import javax.swing.event.PopupMenuListener;
 import net.runelite.api.Client;
@@ -72,6 +73,7 @@ class MenuThemesPanel extends PluginPanel
 	private JSpinner fontSizeSpinner;
 
 	private final JPanel rulesPanel = new JPanel();
+	private final List<Rule> rules = new ArrayList<>();
 
 	private boolean refreshing;
 
@@ -358,17 +360,15 @@ class MenuThemesPanel extends PluginPanel
 		section.addRow(row("Bold", bold));
 
 		rulesPanel.setLayout(new DynamicGridLayout(0, 1, 0, 4));
-		rebuildRuleRows();
+		rules.addAll(parseRules());
+		for (Rule rule : rules)
+		{
+			rulesPanel.add(ruleRow(rule, false));
+		}
 		section.addRow(rulesPanel);
 
 		JButton addRule = new JButton("+ Add rule");
-		addRule.addActionListener(e ->
-		{
-			List<Rule> rules = parseRules();
-			rules.add(new Rule("", Color.WHITE));
-			saveRules(rules);
-			rebuildRuleRows();
-		});
+		addRule.addActionListener(e -> addNewRule());
 		section.addRow(addRule);
 
 		return section;
@@ -492,7 +492,7 @@ class MenuThemesPanel extends PluginPanel
 
 	private List<Rule> parseRules()
 	{
-		List<Rule> rules = new ArrayList<>();
+		List<Rule> parsed = new ArrayList<>();
 		for (String line : config.highlightRules().split("\n"))
 		{
 			int eq = line.lastIndexOf('=');
@@ -510,65 +510,67 @@ class MenuThemesPanel extends PluginPanel
 			{
 				continue;
 			}
-			rules.add(new Rule(option, Color.decode("#" + hex)));
+			parsed.add(new Rule(option, Color.decode("#" + hex)));
 		}
-		return rules;
+		return parsed;
 	}
 
-	private void saveRules(List<Rule> rules)
+	/**
+	 * Writes every current rule to config, skipping blank option names. Blank rows stay in the
+	 * UI (and in {@link #rules}) while they're being edited - they just aren't persisted yet.
+	 */
+	private void persistRules()
 	{
 		StringBuilder sb = new StringBuilder();
 		for (Rule rule : rules)
 		{
+			if (rule.option.trim().isEmpty())
+			{
+				continue;
+			}
 			if (sb.length() > 0)
 			{
 				sb.append('\n');
 			}
-			sb.append(rule.option).append('=').append(hex(rule.colour));
+			sb.append(rule.option.trim()).append('=').append(hex(rule.colour));
 		}
 		configManager.setConfiguration(MenuThemesConfig.GROUP, "highlightRules", sb.toString());
 	}
 
-	private void rebuildRuleRows()
+	private void addNewRule()
 	{
-		rulesPanel.removeAll();
-		List<Rule> rules = parseRules();
-		for (int i = 0; i < rules.size(); i++)
-		{
-			rulesPanel.add(ruleRow(rules.get(i), i));
-		}
+		Rule rule = new Rule("New rule", new Color(0xFF9F1C));
+		rules.add(rule);
+		rulesPanel.add(ruleRow(rule, true));
 		rulesPanel.revalidate();
 		rulesPanel.repaint();
 	}
 
-	private JPanel ruleRow(Rule rule, int index)
+	private JPanel ruleRow(Rule rule, boolean focusField)
 	{
 		JPanel panel = new JPanel(new BorderLayout(4, 0));
 
 		JTextField optionField = new JTextField(rule.option);
 		optionField.setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 4));
+		Runnable commit = () ->
+		{
+			rule.option = optionField.getText().trim();
+			persistRules();
+		};
+		optionField.addActionListener(e -> commit.run());
 		optionField.addFocusListener(new FocusAdapter()
 		{
 			@Override
 			public void focusLost(FocusEvent e)
 			{
-				List<Rule> current = parseRules();
-				if (index < current.size())
-				{
-					current.get(index).option = optionField.getText().trim();
-					saveRules(current);
-				}
+				commit.run();
 			}
 		});
 
 		ColorJButton colourBtn = colourButton(rule.colour, "Rule colour", c ->
 		{
-			List<Rule> current = parseRules();
-			if (index < current.size())
-			{
-				current.get(index).colour = c;
-				saveRules(current);
-			}
+			rule.colour = c;
+			persistRules();
 		});
 
 		JButton remove = new JButton("✕");
@@ -576,13 +578,11 @@ class MenuThemesPanel extends PluginPanel
 		remove.setMargin(new Insets(2, 6, 2, 6));
 		remove.addActionListener(e ->
 		{
-			List<Rule> current = parseRules();
-			if (index < current.size())
-			{
-				current.remove(index);
-				saveRules(current);
-			}
-			rebuildRuleRows();
+			rules.remove(rule);
+			rulesPanel.remove(panel);
+			rulesPanel.revalidate();
+			rulesPanel.repaint();
+			persistRules();
 		});
 
 		JPanel right = new JPanel(new BorderLayout(4, 0));
@@ -591,6 +591,16 @@ class MenuThemesPanel extends PluginPanel
 
 		panel.add(optionField, BorderLayout.CENTER);
 		panel.add(right, BorderLayout.EAST);
+
+		if (focusField)
+		{
+			SwingUtilities.invokeLater(() ->
+			{
+				optionField.requestFocusInWindow();
+				optionField.selectAll();
+			});
+		}
+
 		return panel;
 	}
 
