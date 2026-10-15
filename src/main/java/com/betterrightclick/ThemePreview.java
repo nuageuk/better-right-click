@@ -9,17 +9,19 @@ import java.awt.event.MouseEvent;
 import java.util.Arrays;
 import java.util.List;
 import javax.swing.JPanel;
-import net.runelite.api.Client;
 import net.runelite.client.ui.ColorScheme;
 
 /**
- * Draws a fixed sample menu with the current working theme, for live feedback while editing.
+ * Draws a fixed sample menu with the current working theme, for live feedback while editing. Paints
+ * on the EDT, so it never touches {@code Client}; player details come from {@link LocalPlayerSnapshot}.
  */
 class ThemePreview extends JPanel
 {
 	private static final int TOP_MARGIN = 10;
 	private static final int SIDE_MARGIN = 8;
 	private static final int MIN_MENU_WIDTH = 10;
+	// Lowest possible combat level; used while logged out.
+	private static final int PLACEHOLDER_COMBAT_LEVEL = 3;
 
 	private static final List<MenuRenderer.Row> SAMPLE_ROWS = Arrays.asList(
 		new MenuRenderer.Row("Attack", "<col=ffff00>Guard</col> <col=ffffff>(level-21)</col>", MenuRenderer.TargetKind.NPC),
@@ -30,7 +32,7 @@ class ThemePreview extends JPanel
 		new MenuRenderer.Row("Cancel", "", MenuRenderer.TargetKind.OTHER)
 	);
 
-	private final Client client;
+	private final LocalPlayerSnapshot localPlayer;
 	private final ThemeManager themeManager;
 	private final BetterRightClickConfig config;
 	private final MenuRenderer renderer = new MenuRenderer();
@@ -38,9 +40,9 @@ class ThemePreview extends JPanel
 
 	private int hoverIndex = -1;
 
-	ThemePreview(Client client, ThemeManager themeManager, BetterRightClickConfig config)
+	ThemePreview(LocalPlayerSnapshot localPlayer, ThemeManager themeManager, BetterRightClickConfig config)
 	{
-		this.client = client;
+		this.localPlayer = localPlayer;
 		this.themeManager = themeManager;
 		this.config = config;
 		setBackground(ColorScheme.DARKER_GRAY_COLOR);
@@ -76,7 +78,9 @@ class ThemePreview extends JPanel
 		Theme theme = themeManager.effectiveTheme();
 		int width = Math.max(MIN_MENU_WIDTH, getWidth() - SIDE_MARGIN * 2);
 		bounds.setBounds(SIDE_MARGIN, TOP_MARGIN, width, menuHeight(theme));
-		renderer.render((Graphics2D) g, client, theme, config, SAMPLE_ROWS, bounds, hoverIndex);
+		Integer level = localPlayer.combatLevel();
+		renderer.render((Graphics2D) g, null, theme, config, SAMPLE_ROWS, bounds, hoverIndex,
+			level != null ? level : PLACEHOLDER_COMBAT_LEVEL);
 	}
 
 	private void updateHover(int mouseY)

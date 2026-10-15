@@ -19,7 +19,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import net.runelite.api.Client;
 import net.runelite.api.IndexedSprite;
-import net.runelite.api.Player;
 import net.runelite.client.ui.FontManager;
 import net.runelite.client.util.ColorUtil;
 import net.runelite.client.util.Text;
@@ -29,7 +28,8 @@ import net.runelite.client.util.Text;
  * own bounds/hover row and pass in plain {@link Row}s instead of real menu entries.
  * <p>
  * Each caller owns its own instance and only ever uses it from one thread (the overlay from the
- * client thread, the preview from the EDT), so the caches here need no synchronisation.
+ * client thread, the preview from the EDT), so the caches here need no synchronisation. The preview
+ * passes a null {@code Client}, so nothing here may touch the client off the client thread.
  */
 final class MenuRenderer
 {
@@ -74,8 +74,12 @@ final class MenuRenderer
 	private String cachedRulesRaw;
 	private Map<String, Color> cachedRules = Collections.emptyMap();
 
+	/**
+	 * @param client null when not on the client thread; {@code <img>} tags are then skipped
+	 * @param localCombatLevel used to colour combat levels in Custom mode
+	 */
 	void render(Graphics2D graphics, Client client, Theme theme, BetterRightClickConfig config,
-		List<Row> rows, Rectangle bounds, int hoverIndex)
+		List<Row> rows, Rectangle bounds, int hoverIndex, int localCombatLevel)
 	{
 		updateThemeCache(theme, graphics);
 
@@ -110,7 +114,7 @@ final class MenuRenderer
 			Map<String, Color> rules = highlightsOn ? rules(config.highlightRules()) : Collections.emptyMap();
 			boolean showHitRows = config.showHitRows();
 			int rowTextOffsetY = centreOffset(rowHeight, metrics, baselineNudge);
-			targetColours.load(config, client);
+			targetColours.load(config, localCombatLevel);
 
 			for (int rowIndex = 0; rowIndex < rows.size(); rowIndex++)
 			{
@@ -334,7 +338,7 @@ final class MenuRenderer
 		{
 			return cached;
 		}
-		IndexedSprite[] icons = client.getModIcons();
+		IndexedSprite[] icons = client != null ? client.getModIcons() : null;
 		if (icons == null || index < 0 || index >= icons.length || icons[index] == null)
 		{
 			return null;
@@ -564,12 +568,11 @@ final class MenuRenderer
 		private Color same;
 		private Color higher;
 
-		private void load(BetterRightClickConfig config, Client client)
+		private void load(BetterRightClickConfig config, int localCombatLevel)
 		{
 			targetMode = config.targetMode();
 			levelMode = config.combatLevelMode();
-			Player local = client.getLocalPlayer();
-			localLevel = local != null ? local.getCombatLevel() : 0;
+			localLevel = localCombatLevel;
 			npc = config.npcColour();
 			player = config.playerColour();
 			item = config.itemColour();

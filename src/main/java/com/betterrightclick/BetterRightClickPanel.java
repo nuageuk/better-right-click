@@ -39,7 +39,6 @@ import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingUtilities;
 import javax.swing.event.PopupMenuEvent;
 import javax.swing.event.PopupMenuListener;
-import net.runelite.api.Client;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.ui.DynamicGridLayout;
 import net.runelite.client.ui.FontManager;
@@ -87,7 +86,7 @@ class BetterRightClickPanel extends PluginPanel
 	private boolean refreshing;
 
 	@Inject
-	BetterRightClickPanel(Client client, ThemeManager themeManager, BetterRightClickConfig config,
+	BetterRightClickPanel(LocalPlayerSnapshot localPlayer, ThemeManager themeManager, BetterRightClickConfig config,
 		ConfigManager configManager, ColorPickerManager colorPickerManager)
 	{
 		this.themeManager = themeManager;
@@ -95,7 +94,7 @@ class BetterRightClickPanel extends PluginPanel
 		this.configManager = configManager;
 		this.colorPickerManager = colorPickerManager;
 
-		preview = new ThemePreview(client, themeManager, config);
+		preview = new ThemePreview(localPlayer, themeManager, config);
 
 		add(preview);
 		add(buildThemeRow());

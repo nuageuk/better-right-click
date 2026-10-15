@@ -8,7 +8,10 @@ import java.awt.image.BufferedImage;
 import javax.inject.Inject;
 import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
+import net.runelite.api.GameState;
+import net.runelite.api.Player;
 import net.runelite.api.events.BeforeMenuRender;
+import net.runelite.api.events.GameStateChanged;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.events.ConfigChanged;
@@ -57,6 +60,9 @@ public class BetterRightClickPlugin extends Plugin
 	@Inject
 	private ClientToolbar clientToolbar;
 
+	@Inject
+	private LocalPlayerSnapshot localPlayer;
+
 	// Built in startUp(), not injected as a field: RuneLite's look-and-feel (RuneLiteLAF) is only
 	// installed by ClientUI.init(), which runs after plugins are loaded but before startUp() is
 	// called. A Swing-holding field would be constructed during the load phase - before the LAF is
@@ -82,6 +88,7 @@ public class BetterRightClickPlugin extends Plugin
 		clientToolbar.addNavigation(navigationButton);
 
 		warnIfHdMenuEnabled(configManager.getConfiguration(INTERFACE_STYLES_GROUP, HD_MENU_KEY));
+		captureLocalPlayer();
 	}
 
 	@Override
@@ -93,6 +100,7 @@ public class BetterRightClickPlugin extends Plugin
 		panel = null;
 		warnedAboutHdMenu = false;
 		menuOverlay.resetFailure();
+		localPlayer.clear();
 	}
 
 	@Subscribe
@@ -101,6 +109,19 @@ public class BetterRightClickPlugin extends Plugin
 		if (menuOverlay.shouldDraw())
 		{
 			event.consume();
+		}
+	}
+
+	@Subscribe
+	public void onGameStateChanged(GameStateChanged event)
+	{
+		if (event.getGameState() == GameState.LOGGED_IN)
+		{
+			captureLocalPlayer();
+		}
+		else if (event.getGameState() == GameState.LOGIN_SCREEN)
+		{
+			localPlayer.clear();
 		}
 	}
 
@@ -117,6 +138,28 @@ public class BetterRightClickPlugin extends Plugin
 	BetterRightClickConfig provideConfig(ConfigManager configManager)
 	{
 		return configManager.getConfig(BetterRightClickConfig.class);
+	}
+
+	/**
+	 * Retries each client tick until the local player exists (it is often still null on the
+	 * LOGGED_IN event), and gives up quietly if we are no longer logged in.
+	 */
+	private void captureLocalPlayer()
+	{
+		clientThread.invokeLater(() ->
+		{
+			if (client.getGameState() != GameState.LOGGED_IN)
+			{
+				return true;
+			}
+			Player player = client.getLocalPlayer();
+			if (player == null)
+			{
+				return false;
+			}
+			localPlayer.set(player.getCombatLevel());
+			return true;
+		});
 	}
 
 	// Called from startUp and ConfigChanged, neither of which is guaranteed to be on the client thread.

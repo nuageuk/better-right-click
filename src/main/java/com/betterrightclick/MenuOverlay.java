@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.api.Menu;
 import net.runelite.api.MenuEntry;
+import net.runelite.api.Player;
 import net.runelite.api.Point;
 import net.runelite.client.ui.overlay.Overlay;
 import net.runelite.client.ui.overlay.OverlayLayer;
@@ -117,7 +118,9 @@ public class MenuOverlay extends Overlay
 
 		int headerHeight = theme.showHeader ? Limits.headerHeight(config) : 0;
 		int hoverIndex = hoverIndex(client.getMouseCanvasPosition(), headerHeight, Limits.rowHeight(config));
-		renderer.render(graphics, client, theme, config, rows, bounds, hoverIndex);
+		Player local = client.getLocalPlayer();
+		int localLevel = local != null ? local.getCombatLevel() : 0;
+		renderer.render(graphics, client, theme, config, rows, bounds, hoverIndex, localLevel);
 	}
 
 	private int hoverIndex(Point mouse, int headerHeight, int rowHeight)
