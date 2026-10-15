@@ -85,7 +85,7 @@ class ThemeManager
 
 	boolean isEdited()
 	{
-		return !sameStyle(working, active());
+		return !working.sameStyle(active());
 	}
 
 	boolean isFull()
@@ -243,10 +243,10 @@ class ThemeManager
 					{
 						break;
 					}
-					Theme theme = s == null || !isValidStoredId(s.id) ? null : s.toTheme(s.id);
-					if (theme != null)
+					// first occurrence of a duplicated id wins
+					if (s != null && isValidStoredId(s.id) && !userThemes.containsKey(s.id))
 					{
-						userThemes.put(theme.id, theme);
+						userThemes.put(s.id, s.toTheme(s.id));
 					}
 				}
 			}
@@ -303,16 +303,6 @@ class ThemeManager
 	{
 		String trimmed = name == null ? "" : name.trim();
 		return trimmed.isEmpty() ? DEFAULT_THEME_NAME : Limits.truncate(trimmed, Limits.MAX_THEME_NAME_LENGTH);
-	}
-
-	private static boolean sameStyle(Theme a, Theme b)
-	{
-		return a.bg.equals(b.bg) && a.border.equals(b.border) && a.header.equals(b.header)
-			&& a.headerText.equals(b.headerText) && a.text.equals(b.text) && a.hover.equals(b.hover)
-			&& a.accent.equals(b.accent) && a.radius == b.radius && a.opacity == b.opacity
-			&& a.hoverStyle == b.hoverStyle && a.showBorder == b.showBorder && a.showShadow == b.showShadow
-			&& a.showHeader == b.showHeader && a.font == b.font && a.fontSize == b.fontSize
-			&& a.textShadow == b.textShadow;
 	}
 
 	private void persistUserThemes()

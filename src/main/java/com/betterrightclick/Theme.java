@@ -1,6 +1,7 @@
 package com.betterrightclick;
 
 import java.awt.Color;
+import java.util.Objects;
 
 /**
  * An immutable, fully self-contained menu style: colours, geometry style and visibility toggles.
@@ -154,5 +155,41 @@ final class Theme
 	{
 		return new Theme(id, name, builtIn, bg, border, header, headerText, text, hover, accent,
 			radius, opacity, hoverStyle, showBorder, showShadow, showHeader, font, fontSize, v);
+	}
+
+	/**
+	 * True if every visual field matches, ignoring identity (id, name, builtIn). Drives the "edited"
+	 * state, so it must cover every style field.
+	 */
+	boolean sameStyle(Theme o)
+	{
+		return bg.equals(o.bg) && border.equals(o.border) && header.equals(o.header)
+			&& headerText.equals(o.headerText) && text.equals(o.text) && hover.equals(o.hover)
+			&& accent.equals(o.accent) && radius == o.radius && opacity == o.opacity
+			&& hoverStyle == o.hoverStyle && showBorder == o.showBorder && showShadow == o.showShadow
+			&& showHeader == o.showHeader && font == o.font && fontSize == o.fontSize
+			&& textShadow == o.textShadow;
+	}
+
+	@Override
+	public boolean equals(Object o)
+	{
+		if (this == o)
+		{
+			return true;
+		}
+		if (!(o instanceof Theme))
+		{
+			return false;
+		}
+		Theme t = (Theme) o;
+		return id.equals(t.id) && name.equals(t.name) && builtIn == t.builtIn && sameStyle(t);
+	}
+
+	@Override
+	public int hashCode()
+	{
+		return Objects.hash(id, name, builtIn, bg, border, header, headerText, text, hover, accent,
+			radius, opacity, hoverStyle, showBorder, showShadow, showHeader, font, fontSize, textShadow);
 	}
 }

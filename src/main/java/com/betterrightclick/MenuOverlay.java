@@ -9,6 +9,7 @@ import javax.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.api.Menu;
+import net.runelite.api.MenuAction;
 import net.runelite.api.MenuEntry;
 import net.runelite.api.Player;
 import net.runelite.api.Point;
@@ -17,7 +18,7 @@ import net.runelite.client.ui.overlay.OverlayLayer;
 import net.runelite.client.ui.overlay.OverlayPosition;
 
 @Slf4j
-public class MenuOverlay extends Overlay
+class MenuOverlay extends Overlay
 {
 	private static final int NO_ITEM = -1;
 
@@ -26,6 +27,7 @@ public class MenuOverlay extends Overlay
 	private final ThemeManager themeManager;
 	private final MenuRenderer renderer = new MenuRenderer();
 	private final List<MenuRenderer.Row> rows = new ArrayList<>();
+	private final List<MenuRenderer.Row> rowPool = new ArrayList<>();
 	private final Rectangle bounds = new Rectangle();
 
 	/**
@@ -104,23 +106,41 @@ public class MenuOverlay extends Overlay
 		bounds.setBounds(menu.getMenuX(), menu.getMenuY(), menu.getMenuWidth(), menu.getMenuHeight());
 		Theme theme = themeManager.effectiveTheme();
 
-		// Entries are stored bottom-up; rows are drawn top-down.
-		MenuEntry[] entries = menu.getMenuEntries();
-		rows.clear();
-		for (int i = entries.length - 1; i >= 0; i--)
-		{
-			MenuEntry entry = entries[i];
-			if (entry != null)
-			{
-				rows.add(new MenuRenderer.Row(entry.getOption(), entry.getTarget(), classify(entry)));
-			}
-		}
+		fillRows(menu.getMenuEntries());
 
 		int headerHeight = theme.showHeader ? Limits.headerHeight(config) : 0;
 		int hoverIndex = hoverIndex(client.getMouseCanvasPosition(), headerHeight, Limits.rowHeight(config));
 		Player local = client.getLocalPlayer();
 		int localLevel = local != null ? local.getCombatLevel() : 0;
 		renderer.render(graphics, client, theme, config, rows, bounds, hoverIndex, localLevel);
+	}
+
+	/**
+	 * Entries are stored bottom-up; rows are drawn top-down. A null entry still occupies a row so
+	 * the hover maths stays aligned with the vanilla click areas.
+	 */
+	private void fillRows(MenuEntry[] entries)
+	{
+		rows.clear();
+		for (int i = entries.length - 1; i >= 0; i--)
+		{
+			int slot = rows.size();
+			if (slot == rowPool.size())
+			{
+				rowPool.add(new MenuRenderer.Row(null, null, MenuRenderer.TargetKind.OTHER));
+			}
+			MenuRenderer.Row row = rowPool.get(slot);
+			MenuEntry entry = entries[i];
+			if (entry != null)
+			{
+				row.set(entry.getOption(), entry.getTarget(), classify(entry));
+			}
+			else
+			{
+				row.set(null, null, MenuRenderer.TargetKind.OTHER);
+			}
+			rows.add(row);
+		}
 	}
 
 	private int hoverIndex(Point mouse, int headerHeight, int rowHeight)
@@ -134,8 +154,8 @@ public class MenuOverlay extends Overlay
 		{
 			return -1;
 		}
-		int idx = relativeY / rowHeight;
-		return idx < rows.size() ? idx : -1;
+		int index = relativeY / rowHeight;
+		return index < rows.size() ? index : -1;
 	}
 
 	private static MenuRenderer.TargetKind classify(MenuEntry entry)
@@ -152,7 +172,12 @@ public class MenuOverlay extends Overlay
 		{
 			return MenuRenderer.TargetKind.ITEM;
 		}
-		switch (entry.getType())
+		MenuAction type = entry.getType();
+		if (type == null)
+		{
+			return MenuRenderer.TargetKind.OTHER;
+		}
+		switch (type)
 		{
 			case GAME_OBJECT_FIRST_OPTION:
 			case GAME_OBJECT_SECOND_OPTION:

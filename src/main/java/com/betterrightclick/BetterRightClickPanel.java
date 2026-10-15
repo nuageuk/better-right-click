@@ -17,6 +17,7 @@ import java.awt.event.MouseEvent;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -37,6 +38,7 @@ import javax.swing.JSpinner;
 import javax.swing.JTextField;
 import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingUtilities;
+import javax.swing.Timer;
 import javax.swing.event.PopupMenuEvent;
 import javax.swing.event.PopupMenuListener;
 import net.runelite.client.config.ConfigManager;
@@ -63,6 +65,11 @@ class BetterRightClickPanel extends PluginPanel
 	private static final Insets REMOVE_INSETS = new Insets(2, 6, 2, 6);
 	private static final Color NEW_RULE_COLOUR = new Color(0xFF9F1C);
 	private static final String NEW_RULE_OPTION = "New rule";
+	// Holding a spinner arrow fires many changes; persist once it settles rather than on every step.
+	private static final int SPINNER_COMMIT_DELAY_MS = 300;
+	private static final Consumer<Color> NOTHING = c ->
+	{
+	};
 
 	private final ThemeManager themeManager;
 	private final BetterRightClickConfig config;
@@ -340,7 +347,9 @@ class BetterRightClickPanel extends PluginPanel
 	private JPanel themeColourRow(String label, Function<Theme, Color> getter,
 		BiFunction<Theme, Color, Theme> setter)
 	{
-		ColorJButton button = colourButton(getter.apply(themeManager.effectiveTheme()), label, c -> apply(t -> setter.apply(t, c)));
+		// Live edits only touch the working copy; themes are persisted by Save.
+		ColorJButton button = colourButton(getter.apply(themeManager.effectiveTheme()), label,
+			c -> apply(t -> setter.apply(t, c)), NOTHING);
 		themeControlRefreshers.add(() -> setColourButton(button, getter.apply(themeManager.effectiveTheme())));
 		return row(label, button);
 	}
@@ -351,7 +360,7 @@ class BetterRightClickPanel extends PluginPanel
 	private void apply(Function<Theme, Theme> mutator)
 	{
 		themeManager.setWorking(mutator.apply(themeManager.effectiveTheme()));
-		preview.repaint();
+		preview.refresh();
 		themeCombo.repaint();
 		saveButton.setEnabled(!themeManager.active().builtIn && themeManager.isEdited());
 		revertButton.setEnabled(themeManager.isEdited());
@@ -365,12 +374,12 @@ class BetterRightClickPanel extends PluginPanel
 
 		JCheckBox enabled = new JCheckBox();
 		enabled.setSelected(config.highlightsEnabled());
-		enabled.addActionListener(e -> configManager.setConfiguration(BetterRightClickConfig.GROUP, BetterRightClickConfig.KEY_HIGHLIGHTS_ENABLED, enabled.isSelected()));
+		enabled.addActionListener(e -> setGlobal(BetterRightClickConfig.KEY_HIGHLIGHTS_ENABLED, enabled.isSelected()));
 		section.addRow(row("Enabled", enabled));
 
 		JCheckBox bold = new JCheckBox();
 		bold.setSelected(config.highlightsBold());
-		bold.addActionListener(e -> configManager.setConfiguration(BetterRightClickConfig.GROUP, BetterRightClickConfig.KEY_HIGHLIGHTS_BOLD, bold.isSelected()));
+		bold.addActionListener(e -> setGlobal(BetterRightClickConfig.KEY_HIGHLIGHTS_BOLD, bold.isSelected()));
 		section.addRow(row("Bold", bold));
 
 		rulesPanel.setLayout(new DynamicGridLayout(0, 1, 0, ROW_GAP));
@@ -397,11 +406,11 @@ class BetterRightClickPanel extends PluginPanel
 		modeCombo.setRenderer(new TitleCaseListCellRenderer());
 		modeCombo.setSelectedItem(config.targetMode());
 
-		ColorJButton npc = colourButton(config.npcColour(), "NPC colour", globalColourWriter(BetterRightClickConfig.KEY_NPC_COLOUR));
-		ColorJButton player = colourButton(config.playerColour(), "Player colour", globalColourWriter(BetterRightClickConfig.KEY_PLAYER_COLOUR));
-		ColorJButton item = colourButton(config.itemColour(), "Item colour", globalColourWriter(BetterRightClickConfig.KEY_ITEM_COLOUR));
-		ColorJButton object = colourButton(config.objectColour(), "Object colour", globalColourWriter(BetterRightClickConfig.KEY_OBJECT_COLOUR));
-		ColorJButton other = colourButton(config.otherColour(), "Other colour", globalColourWriter(BetterRightClickConfig.KEY_OTHER_COLOUR));
+		ColorJButton npc = globalColourButton(config.npcColour(), "NPC colour", BetterRightClickConfig.KEY_NPC_COLOUR);
+		ColorJButton player = globalColourButton(config.playerColour(), "Player colour", BetterRightClickConfig.KEY_PLAYER_COLOUR);
+		ColorJButton item = globalColourButton(config.itemColour(), "Item colour", BetterRightClickConfig.KEY_ITEM_COLOUR);
+		ColorJButton object = globalColourButton(config.objectColour(), "Object colour", BetterRightClickConfig.KEY_OBJECT_COLOUR);
+		ColorJButton other = globalColourButton(config.otherColour(), "Other colour", BetterRightClickConfig.KEY_OTHER_COLOUR);
 
 		Runnable updateEnabled = () ->
 		{
@@ -415,7 +424,7 @@ class BetterRightClickPanel extends PluginPanel
 		updateEnabled.run();
 		modeCombo.addActionListener(e ->
 		{
-			configManager.setConfiguration(BetterRightClickConfig.GROUP, BetterRightClickConfig.KEY_TARGET_MODE, modeCombo.getSelectedItem());
+			setGlobal(BetterRightClickConfig.KEY_TARGET_MODE, modeCombo.getSelectedItem());
 			updateEnabled.run();
 		});
 
@@ -436,9 +445,9 @@ class BetterRightClickPanel extends PluginPanel
 		modeCombo.setRenderer(new TitleCaseListCellRenderer());
 		modeCombo.setSelectedItem(config.combatLevelMode());
 
-		ColorJButton lower = colourButton(config.lowerLevelColour(), "Lower level colour", globalColourWriter(BetterRightClickConfig.KEY_LOWER_LEVEL_COLOUR));
-		ColorJButton same = colourButton(config.sameLevelColour(), "Same level colour", globalColourWriter(BetterRightClickConfig.KEY_SAME_LEVEL_COLOUR));
-		ColorJButton higher = colourButton(config.higherLevelColour(), "Higher level colour", globalColourWriter(BetterRightClickConfig.KEY_HIGHER_LEVEL_COLOUR));
+		ColorJButton lower = globalColourButton(config.lowerLevelColour(), "Lower level colour", BetterRightClickConfig.KEY_LOWER_LEVEL_COLOUR);
+		ColorJButton same = globalColourButton(config.sameLevelColour(), "Same level colour", BetterRightClickConfig.KEY_SAME_LEVEL_COLOUR);
+		ColorJButton higher = globalColourButton(config.higherLevelColour(), "Higher level colour", BetterRightClickConfig.KEY_HIGHER_LEVEL_COLOUR);
 
 		Runnable updateEnabled = () ->
 		{
@@ -450,7 +459,7 @@ class BetterRightClickPanel extends PluginPanel
 		updateEnabled.run();
 		modeCombo.addActionListener(e ->
 		{
-			configManager.setConfiguration(BetterRightClickConfig.GROUP, BetterRightClickConfig.KEY_COMBAT_LEVEL_MODE, modeCombo.getSelectedItem());
+			setGlobal(BetterRightClickConfig.KEY_COMBAT_LEVEL_MODE, modeCombo.getSelectedItem());
 			updateEnabled.run();
 		});
 
@@ -476,22 +485,34 @@ class BetterRightClickPanel extends PluginPanel
 
 		JCheckBox hitRows = new JCheckBox();
 		hitRows.setSelected(config.showHitRows());
-		hitRows.addActionListener(e -> configManager.setConfiguration(BetterRightClickConfig.GROUP, BetterRightClickConfig.KEY_SHOW_HIT_ROWS, hitRows.isSelected()));
+		hitRows.addActionListener(e -> setGlobal(BetterRightClickConfig.KEY_SHOW_HIT_ROWS, hitRows.isSelected()));
 		section.addRow(row("Show hit rows", hitRows));
 
 		return section;
 	}
 
-	private Consumer<Color> globalColourWriter(String key)
+	/**
+	 * Persists a global (non-theme) setting. The preview reads these from config, so it is
+	 * refreshed after every write.
+	 */
+	private void setGlobal(String key, Object value)
 	{
-		return c -> configManager.setConfiguration(BetterRightClickConfig.GROUP, key, c);
+		configManager.setConfiguration(BetterRightClickConfig.GROUP, key, value);
+		preview.refresh();
+	}
+
+	private ColorJButton globalColourButton(Color initial, String title, String key)
+	{
+		return colourButton(initial, title, NOTHING, c -> setGlobal(key, c));
 	}
 
 	private JSpinner globalIntSpinner(int value, int min, int max, String key)
 	{
 		JSpinner spinner = new JSpinner(new SpinnerNumberModel(value, min, max, 1));
 		spinnerFieldWidth(spinner);
-		spinner.addChangeListener(e -> configManager.setConfiguration(BetterRightClickConfig.GROUP, key, spinner.getValue()));
+		Timer commit = new Timer(SPINNER_COMMIT_DELAY_MS, e -> setGlobal(key, spinner.getValue()));
+		commit.setRepeats(false);
+		spinner.addChangeListener(e -> commit.restart());
 		return spinner;
 	}
 
@@ -528,7 +549,7 @@ class BetterRightClickPanel extends PluginPanel
 			}
 			sb.append(rule.option.trim()).append('=').append(hex(rule.colour));
 		}
-		configManager.setConfiguration(BetterRightClickConfig.GROUP, BetterRightClickConfig.KEY_HIGHLIGHT_RULES, sb.toString());
+		setGlobal(BetterRightClickConfig.KEY_HIGHLIGHT_RULES, sb.toString());
 	}
 
 	private void addNewRule()
@@ -558,8 +579,13 @@ class BetterRightClickPanel extends PluginPanel
 		optionField.setBorder(BorderFactory.createEmptyBorder(FIELD_PADDING, FIELD_PADDING, FIELD_PADDING, FIELD_PADDING));
 		Runnable commit = () ->
 		{
-			rule.option = Limits.truncate(optionField.getText().trim(), Limits.MAX_RULE_OPTION_LENGTH);
-			persistRules();
+			String option = Limits.truncate(optionField.getText().trim(), Limits.MAX_RULE_OPTION_LENGTH);
+			// Enter followed by focus loss would otherwise write the same value twice
+			if (!option.equals(rule.option))
+			{
+				rule.option = option;
+				persistRules();
+			}
 		};
 		optionField.addActionListener(e -> commit.run());
 		optionField.addFocusListener(new FocusAdapter()
@@ -571,11 +597,7 @@ class BetterRightClickPanel extends PluginPanel
 			}
 		});
 
-		ColorJButton colourBtn = colourButton(rule.colour, "Rule colour", c ->
-		{
-			rule.colour = c;
-			persistRules();
-		});
+		ColorJButton colourBtn = colourButton(rule.colour, "Rule colour", c -> rule.colour = c, c -> persistRules());
 
 		JButton remove = new JButton("✕");
 		remove.setToolTipText("Remove rule");
@@ -611,7 +633,11 @@ class BetterRightClickPanel extends PluginPanel
 
 	// --- Shared widgets ---
 
-	private ColorJButton colourButton(Color initial, String title, Consumer<Color> onChange)
+	/**
+	 * @param onChange called live while the picker is dragged; must not persist
+	 * @param onCommit called once when the picker closes
+	 */
+	private ColorJButton colourButton(Color initial, String title, Consumer<Color> onChange, Consumer<Color> onCommit)
 	{
 		ColorJButton button = new ColorJButton(hex(initial), initial);
 		button.setFocusable(false);
@@ -631,6 +657,7 @@ class BetterRightClickPanel extends PluginPanel
 					setColourButton(button, c);
 					onChange.accept(c);
 				});
+				picker.setOnClose(onCommit);
 				picker.setVisible(true);
 			}
 		});
@@ -645,7 +672,7 @@ class BetterRightClickPanel extends PluginPanel
 
 	private static String hex(Color colour)
 	{
-		return "#" + ColorUtil.colorToHexCode(colour).toUpperCase();
+		return "#" + ColorUtil.colorToHexCode(colour).toUpperCase(Locale.ROOT);
 	}
 
 	private static JPanel row(String label, JComponent control)
@@ -710,7 +737,7 @@ class BetterRightClickPanel extends PluginPanel
 			saveButton.setEnabled(!active.builtIn && themeManager.isEdited());
 			revertButton.setEnabled(themeManager.isEdited());
 
-			preview.repaint();
+			preview.refresh();
 			themeCombo.repaint();
 		}
 		finally

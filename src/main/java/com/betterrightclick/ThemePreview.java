@@ -65,6 +65,15 @@ class ThemePreview extends JPanel
 		addMouseListener(mouse);
 	}
 
+	/**
+	 * Call after any change that can affect the drawn menu; header/row heights change its size.
+	 */
+	void refresh()
+	{
+		revalidate();
+		repaint();
+	}
+
 	@Override
 	public Dimension getPreferredSize()
 	{
@@ -88,8 +97,8 @@ class ThemePreview extends JPanel
 		Theme theme = themeManager.effectiveTheme();
 		int headerHeight = theme.showHeader ? Limits.headerHeight(config) : 0;
 		int relativeY = mouseY - (TOP_MARGIN + headerHeight);
-		int idx = relativeY < 0 ? -1 : relativeY / Limits.rowHeight(config);
-		setHover(idx >= 0 && idx < SAMPLE_ROWS.size() ? idx : -1);
+		int index = relativeY < 0 ? -1 : relativeY / Limits.rowHeight(config);
+		setHover(index < SAMPLE_ROWS.size() ? index : -1);
 	}
 
 	private void setHover(int index)

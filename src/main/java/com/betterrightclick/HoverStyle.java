@@ -1,6 +1,6 @@
 package com.betterrightclick;
 
-public enum HoverStyle
+enum HoverStyle
 {
 	FILL,
 	BAR,

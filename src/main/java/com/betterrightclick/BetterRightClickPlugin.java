@@ -75,9 +75,8 @@ public class BetterRightClickPlugin extends Plugin
 	@Override
 	protected void startUp()
 	{
-		menuOverlay.resetFailure();
-		overlayManager.add(menuOverlay);
-
+		// Build the panel first: it is the step that can throw, and the overlay (which consumes the
+		// vanilla menu) shouldn't be left registered if startUp fails part-way.
 		panel = getInjector().getInstance(BetterRightClickPanel.class);
 		navigationButton = NavigationButton.builder()
 			.tooltip(NAME)
@@ -87,6 +86,9 @@ public class BetterRightClickPlugin extends Plugin
 			.build();
 		clientToolbar.addNavigation(navigationButton);
 
+		menuOverlay.resetFailure();
+		overlayManager.add(menuOverlay);
+
 		warnIfHdMenuEnabled(configManager.getConfiguration(INTERFACE_STYLES_GROUP, HD_MENU_KEY));
 		captureLocalPlayer();
 	}
@@ -95,8 +97,11 @@ public class BetterRightClickPlugin extends Plugin
 	protected void shutDown()
 	{
 		overlayManager.remove(menuOverlay);
-		clientToolbar.removeNavigation(navigationButton);
-		navigationButton = null;
+		if (navigationButton != null)
+		{
+			clientToolbar.removeNavigation(navigationButton);
+			navigationButton = null;
+		}
 		panel = null;
 		warnedAboutHdMenu = false;
 		menuOverlay.resetFailure();

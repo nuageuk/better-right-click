@@ -33,7 +33,8 @@ import net.runelite.client.util.Text;
  */
 final class MenuRenderer
 {
-	private static final Pattern TAG = Pattern.compile("<([^>]*)>");
+	// Excludes '<' from the tag body so a stray '<' in text doesn't swallow the following real tag.
+	private static final Pattern TAG = Pattern.compile("<([^<>]*)>");
 	private static final Pattern COL = Pattern.compile("col=([0-9a-fA-F]{1,6})", Pattern.CASE_INSENSITIVE);
 	private static final Pattern IMG = Pattern.compile("img=(\\d{1,4})", Pattern.CASE_INSENSITIVE);
 	private static final Pattern LEVEL = Pattern.compile("\\(level-(-?\\d{1,4})\\)", Pattern.CASE_INSENSITIVE);
@@ -48,7 +49,8 @@ final class MenuRenderer
 	private static final int HOVER_BAR_WIDTH = 3;
 	private static final int OUTLINE_INSET = 1;
 	private static final int MAX_ENTRY_LENGTH = 512;
-	private static final int SEGMENT_CACHE_SIZE = 64;
+	// Large enough that a big menu's entries all fit, so a full menu never thrashes the cache.
+	private static final int SEGMENT_CACHE_SIZE = 256;
 	private static final int MAX_ALPHA = 255;
 	private static final double PERCENT = 100.0;
 
@@ -61,6 +63,7 @@ final class MenuRenderer
 	private final Map<Integer, BufferedImage> modIconCache = new HashMap<>();
 	private final Map<String, OptionSegments> optionCache = boundedCache();
 	private final Map<String, List<Run>> targetCache = boundedCache();
+	private final RoundRectangle2D.Float menuShape = new RoundRectangle2D.Float();
 	private final RoundRectangle2D.Float scratchShape = new RoundRectangle2D.Float();
 	private final TargetColours targetColours = new TargetColours();
 
@@ -81,15 +84,27 @@ final class MenuRenderer
 	void render(Graphics2D graphics, Client client, Theme theme, BetterRightClickConfig config,
 		List<Row> rows, Rectangle bounds, int hoverIndex, int localCombatLevel)
 	{
+		// Work on a copy so no colour/font/clip change leaks to other overlays or Swing children.
+		Graphics2D g = (Graphics2D) graphics.create();
+		try
+		{
+			renderMenu(g, client, theme, config, rows, bounds, hoverIndex, localCombatLevel);
+		}
+		finally
+		{
+			g.dispose();
+		}
+	}
+
+	private void renderMenu(Graphics2D graphics, Client client, Theme theme, BetterRightClickConfig config,
+		List<Row> rows, Rectangle bounds, int hoverIndex, int localCombatLevel)
+	{
 		updateThemeCache(theme, graphics);
 
 		int headerHeight = theme.showHeader ? Limits.headerHeight(config) : 0;
-		int rowHeight = Limits.rowHeight(config);
 		int textOffsetX = Limits.textOffsetX(config);
 		int baselineNudge = Limits.baselineNudge(config);
-
 		FontMetrics metrics = graphics.getFontMetrics(font);
-		FontMetrics boldMetrics = graphics.getFontMetrics(boldFont);
 
 		drawShadow(graphics, theme, bounds);
 		Shape menuShape = menuShape(theme, bounds);
@@ -97,48 +112,50 @@ final class MenuRenderer
 		graphics.fill(menuShape);
 
 		Shape previousClip = graphics.getClip();
-		graphics.setClip(menuShape);
-		try
+		graphics.clip(menuShape);
+		if (theme.showHeader)
 		{
-			if (theme.showHeader)
-			{
-				graphics.setColor(headerColour);
-				graphics.fillRect(bounds.x, bounds.y, bounds.width, headerHeight);
-				graphics.setFont(font);
-				drawRun(graphics, metrics, HEADER_TEXT, bounds.x + textOffsetX,
-					bounds.y + centreOffset(headerHeight, metrics, baselineNudge), theme.headerText, theme.textShadow);
-			}
-
-			boolean highlightsOn = config.highlightsEnabled();
-			boolean highlightsBold = highlightsOn && config.highlightsBold();
-			Map<String, Color> rules = highlightsOn ? rules(config.highlightRules()) : Collections.emptyMap();
-			boolean showHitRows = config.showHitRows();
-			int rowTextOffsetY = centreOffset(rowHeight, metrics, baselineNudge);
-			targetColours.load(config, localCombatLevel);
-
-			for (int rowIndex = 0; rowIndex < rows.size(); rowIndex++)
-			{
-				int rowY = bounds.y + headerHeight + rowIndex * rowHeight;
-				boolean hovered = rowIndex == hoverIndex;
-				if (hovered)
-				{
-					drawHover(graphics, theme, bounds.x, rowY, bounds.width, rowHeight);
-				}
-				if (showHitRows)
-				{
-					graphics.setColor(HIT_ROW_COLOUR);
-					graphics.drawRect(bounds.x, rowY, bounds.width - 1, rowHeight - 1);
-				}
-				drawRow(graphics, client, theme, rows.get(rowIndex), rules, highlightsBold ? boldMetrics : metrics,
-					metrics, bounds.x + textOffsetX, rowY + rowTextOffsetY, bounds.x + bounds.width, hovered);
-			}
+			graphics.setColor(headerColour);
+			graphics.fillRect(bounds.x, bounds.y, bounds.width, headerHeight);
+			graphics.setFont(font);
+			drawRun(graphics, metrics, HEADER_TEXT, bounds.x + textOffsetX,
+				bounds.y + centreOffset(headerHeight, metrics, baselineNudge), theme.headerText, theme.textShadow);
 		}
-		finally
-		{
-			graphics.setClip(previousClip);
-		}
+		drawRows(graphics, client, theme, config, rows, bounds, hoverIndex, localCombatLevel, metrics,
+			bounds.y + headerHeight, textOffsetX, baselineNudge);
+		graphics.setClip(previousClip);
 
 		drawBorder(graphics, theme, bounds);
+	}
+
+	private void drawRows(Graphics2D graphics, Client client, Theme theme, BetterRightClickConfig config,
+		List<Row> rows, Rectangle bounds, int hoverIndex, int localCombatLevel, FontMetrics metrics,
+		int firstRowY, int textOffsetX, int baselineNudge)
+	{
+		boolean highlightsOn = config.highlightsEnabled();
+		FontMetrics highlightMetrics = highlightsOn && config.highlightsBold() ? graphics.getFontMetrics(boldFont) : metrics;
+		Map<String, Color> rules = highlightsOn ? rules(config.highlightRules()) : Collections.emptyMap();
+		boolean showHitRows = config.showHitRows();
+		int rowHeight = Limits.rowHeight(config);
+		int rowTextOffsetY = centreOffset(rowHeight, metrics, baselineNudge);
+		targetColours.load(config, localCombatLevel);
+
+		for (int rowIndex = 0; rowIndex < rows.size(); rowIndex++)
+		{
+			int rowY = firstRowY + rowIndex * rowHeight;
+			boolean hovered = rowIndex == hoverIndex;
+			if (hovered)
+			{
+				drawHover(graphics, theme, bounds.x, rowY, bounds.width, rowHeight);
+			}
+			if (showHitRows)
+			{
+				graphics.setColor(HIT_ROW_COLOUR);
+				graphics.drawRect(bounds.x, rowY, bounds.width - 1, rowHeight - 1);
+			}
+			drawRow(graphics, client, theme, rows.get(rowIndex), rules, highlightMetrics, metrics,
+				bounds.x + textOffsetX, rowY + rowTextOffsetY, bounds.x + bounds.width, hovered);
+		}
 	}
 
 	private void drawRow(Graphics2D graphics, Client client, Theme theme, Row row, Map<String, Color> rules,
@@ -160,8 +177,10 @@ final class MenuRenderer
 		}
 		else
 		{
-			for (Run run : option.runs)
+			List<Run> runs = option.runs;
+			for (int i = 0; i < runs.size(); i++)
 			{
+				Run run = runs.get(i);
 				if (cursorX >= maxX)
 				{
 					return;
@@ -179,8 +198,10 @@ final class MenuRenderer
 			return;
 		}
 		cursorX += metrics.charWidth(' ');
-		for (Run run : targetRuns(row.target))
+		List<Run> runs = targetRuns(row.target);
+		for (int i = 0; i < runs.size(); i++)
 		{
+			Run run = runs.get(i);
 			if (cursorX >= maxX)
 			{
 				return;
@@ -228,15 +249,20 @@ final class MenuRenderer
 		{
 			cachedRulesRaw = raw;
 			cachedRules = HighlightRules.parseLookup(raw);
+			optionCache.clear();
+			targetCache.clear();
 		}
 		return cachedRules;
 	}
 
 	private Shape menuShape(Theme theme, Rectangle bounds)
 	{
-		return theme.radius > 0
-			? new RoundRectangle2D.Float(bounds.x, bounds.y, bounds.width, bounds.height, theme.radius, theme.radius)
-			: bounds;
+		if (theme.radius == 0)
+		{
+			return bounds;
+		}
+		menuShape.setRoundRect(bounds.x, bounds.y, bounds.width, bounds.height, theme.radius, theme.radius);
+		return menuShape;
 	}
 
 	private void drawShadow(Graphics2D graphics, Theme theme, Rectangle bounds)
@@ -291,7 +317,10 @@ final class MenuRenderer
 					width - 1 - OUTLINE_INSET * 2, rowHeight - 1 - OUTLINE_INSET * 2);
 				break;
 			case TEXT:
+				// drawn as an accent-coloured option in drawRow
+				break;
 			case NONE:
+			default:
 				break;
 		}
 	}
@@ -530,11 +559,19 @@ final class MenuRenderer
 	 */
 	static final class Row
 	{
-		final String option;
-		final String target;
-		final TargetKind kind;
+		private String option;
+		private String target;
+		private TargetKind kind;
 
 		Row(String option, String target, TargetKind kind)
+		{
+			set(option, target, kind);
+		}
+
+		/**
+		 * Lets the overlay reuse rows across frames instead of allocating them.
+		 */
+		void set(String option, String target, TargetKind kind)
 		{
 			this.option = option;
 			this.target = target;
@@ -615,6 +652,7 @@ final class MenuRenderer
 					return orDefault(item, tagColour);
 				case OBJECT:
 					return orDefault(object, tagColour);
+				case OTHER:
 				default:
 					return orDefault(other, tagColour);
 			}
