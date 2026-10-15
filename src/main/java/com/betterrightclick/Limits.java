@@ -11,7 +11,7 @@ final class Limits
 	static final int MIN_OPACITY = 40;
 	static final int MAX_OPACITY = 100;
 	static final int MIN_FONT_SIZE = 11;
-	static final int MAX_FONT_SIZE = 24;
+	static final int MAX_FONT_SIZE = 13;
 
 	static final int MIN_HEADER_HEIGHT = 0;
 	static final int MAX_HEADER_HEIGHT = 60;
