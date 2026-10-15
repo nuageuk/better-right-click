@@ -1,2 +1,2 @@
-# Example
-An example greeter plugin
+# Menu Themes
+Customisable themes for the right-click menu
