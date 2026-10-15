@@ -10,19 +10,44 @@ import javax.inject.Singleton;
 class LocalPlayerSnapshot
 {
 	private volatile Integer combatLevel;
+	// Called from the client thread, so it must be safe off the EDT (repaint() is).
+	private volatile Runnable onChange;
 
 	Integer combatLevel()
 	{
 		return combatLevel;
 	}
 
+	void setOnChange(Runnable onChange)
+	{
+		this.onChange = onChange;
+	}
+
 	void set(int level)
 	{
-		combatLevel = level;
+		Integer current = combatLevel;
+		if (current == null || current != level)
+		{
+			combatLevel = level;
+			notifyChange();
+		}
 	}
 
 	void clear()
 	{
-		combatLevel = null;
+		if (combatLevel != null)
+		{
+			combatLevel = null;
+			notifyChange();
+		}
+	}
+
+	private void notifyChange()
+	{
+		Runnable listener = onChange;
+		if (listener != null)
+		{
+			listener.run();
+		}
 	}
 }

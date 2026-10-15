@@ -29,8 +29,6 @@ public interface BetterRightClickConfig extends Config
 	String KEY_LOWER_LEVEL_COLOUR = "lowerLevelColour";
 	String KEY_SAME_LEVEL_COLOUR = "sameLevelColour";
 	String KEY_HIGHER_LEVEL_COLOUR = "higherLevelColour";
-	String KEY_HEADER_HEIGHT = "headerHeight";
-	String KEY_ROW_HEIGHT = "rowHeight";
 	String KEY_TEXT_OFFSET_X = "textOffsetX";
 	String KEY_BASELINE_NUDGE = "baselineNudge";
 	String KEY_SHOW_HIT_ROWS = "showHitRows";
@@ -132,18 +130,6 @@ public interface BetterRightClickConfig extends Config
 	}
 
 	// --- Advanced (geometry) ---
-
-	@ConfigItem(keyName = KEY_HEADER_HEIGHT, name = "", description = "", hidden = true)
-	default int headerHeight()
-	{
-		return 19;
-	}
-
-	@ConfigItem(keyName = KEY_ROW_HEIGHT, name = "", description = "", hidden = true)
-	default int rowHeight()
-	{
-		return 15;
-	}
 
 	@ConfigItem(keyName = KEY_TEXT_OFFSET_X, name = "", description = "", hidden = true)
 	default int textOffsetX()

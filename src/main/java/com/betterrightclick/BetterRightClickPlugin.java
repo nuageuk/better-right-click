@@ -8,6 +8,7 @@ import net.runelite.api.GameState;
 import net.runelite.api.Player;
 import net.runelite.api.events.BeforeMenuRender;
 import net.runelite.api.events.GameStateChanged;
+import net.runelite.api.events.GameTick;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.events.ConfigChanged;
@@ -75,7 +76,6 @@ public class BetterRightClickPlugin extends Plugin
 		overlayManager.add(menuOverlay);
 
 		warnIfHdMenuEnabled(configManager.getConfiguration(INTERFACE_STYLES_GROUP, HD_MENU_KEY));
-		captureLocalPlayer();
 	}
 
 	@Override
@@ -88,6 +88,7 @@ public class BetterRightClickPlugin extends Plugin
 			navigationButton = null;
 		}
 		warnedAboutHdMenu = false;
+		localPlayer.setOnChange(null);
 		localPlayer.clear();
 	}
 
@@ -100,14 +101,22 @@ public class BetterRightClickPlugin extends Plugin
 		}
 	}
 
+	// Polled each tick so level-ups reach the preview; this also covers login, where the local player
+	// is often still null on the LOGGED_IN event.
+	@Subscribe
+	public void onGameTick(GameTick event)
+	{
+		Player player = client.getLocalPlayer();
+		if (player != null)
+		{
+			localPlayer.set(player.getCombatLevel());
+		}
+	}
+
 	@Subscribe
 	public void onGameStateChanged(GameStateChanged event)
 	{
-		if (event.getGameState() == GameState.LOGGED_IN)
-		{
-			captureLocalPlayer();
-		}
-		else if (event.getGameState() == GameState.LOGIN_SCREEN)
+		if (event.getGameState() == GameState.LOGIN_SCREEN)
 		{
 			localPlayer.clear();
 		}
@@ -126,28 +135,6 @@ public class BetterRightClickPlugin extends Plugin
 	BetterRightClickConfig provideConfig(ConfigManager configManager)
 	{
 		return configManager.getConfig(BetterRightClickConfig.class);
-	}
-
-	/**
-	 * Retries each client tick until the local player exists (it is often still null on the
-	 * LOGGED_IN event), and gives up quietly if we are no longer logged in.
-	 */
-	private void captureLocalPlayer()
-	{
-		clientThread.invokeLater(() ->
-		{
-			if (client.getGameState() != GameState.LOGGED_IN)
-			{
-				return true;
-			}
-			Player player = client.getLocalPlayer();
-			if (player == null)
-			{
-				return false;
-			}
-			localPlayer.set(player.getCombatLevel());
-			return true;
-		});
 	}
 
 	// Called from startUp and ConfigChanged, neither of which is guaranteed to be on the client thread.

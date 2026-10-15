@@ -13,10 +13,6 @@ final class Limits
 	static final int MIN_FONT_SIZE = 11;
 	static final int MAX_FONT_SIZE = 13;
 
-	static final int MIN_HEADER_HEIGHT = 0;
-	static final int MAX_HEADER_HEIGHT = 60;
-	static final int MIN_ROW_HEIGHT = 5;
-	static final int MAX_ROW_HEIGHT = 40;
 	static final int MIN_TEXT_OFFSET_X = 0;
 	static final int MAX_TEXT_OFFSET_X = 20;
 	static final int MIN_BASELINE_NUDGE = -10;
@@ -41,16 +37,6 @@ final class Limits
 	static String truncate(String value, int maxLength)
 	{
 		return value.length() > maxLength ? value.substring(0, maxLength) : value;
-	}
-
-	static int headerHeight(BetterRightClickConfig config)
-	{
-		return clamp(config.headerHeight(), MIN_HEADER_HEIGHT, MAX_HEADER_HEIGHT);
-	}
-
-	static int rowHeight(BetterRightClickConfig config)
-	{
-		return clamp(config.rowHeight(), MIN_ROW_HEIGHT, MAX_ROW_HEIGHT);
 	}
 
 	static int textOffsetX(BetterRightClickConfig config)

@@ -430,10 +430,6 @@ class BetterRightClickPanel extends PluginPanel
 	{
 		CollapsibleSection section = new CollapsibleSection("Advanced", "Geometry and debugging", true);
 
-		section.addRow(row("Header height", globalIntSpinner(Limits.headerHeight(config),
-			Limits.MIN_HEADER_HEIGHT, Limits.MAX_HEADER_HEIGHT, BetterRightClickConfig.KEY_HEADER_HEIGHT)));
-		section.addRow(row("Row height", globalIntSpinner(Limits.rowHeight(config),
-			Limits.MIN_ROW_HEIGHT, Limits.MAX_ROW_HEIGHT, BetterRightClickConfig.KEY_ROW_HEIGHT)));
 		section.addRow(row("Text offset X", globalIntSpinner(Limits.textOffsetX(config),
 			Limits.MIN_TEXT_OFFSET_X, Limits.MAX_TEXT_OFFSET_X, BetterRightClickConfig.KEY_TEXT_OFFSET_X)));
 		section.addRow(row("Baseline nudge", globalIntSpinner(Limits.baselineNudge(config),

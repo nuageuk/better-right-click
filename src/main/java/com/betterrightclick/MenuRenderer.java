@@ -42,6 +42,10 @@ final class MenuRenderer
 	private static final Pattern TRAILING_SPACE = Pattern.compile("\\s+(?=(?:<[^<>]*>|\\s)*$)");
 	private static final String CLOSE_COL = "/col";
 
+	// The game's own menu geometry. Its click rows use these, so ours must too.
+	static final int HEADER_HEIGHT = 19;
+	static final int ROW_HEIGHT = 15;
+
 	private static final String HEADER_TEXT = "Choose Option";
 	private static final Color DEFAULT_TAG_COLOUR = Color.YELLOW;
 	private static final Color TEXT_SHADOW_COLOUR = Color.BLACK;
@@ -69,6 +73,7 @@ final class MenuRenderer
 	private final Map<String, List<Run>> strippedTargetCache = boundedCache();
 	private final RoundRectangle2D.Float menuShape = new RoundRectangle2D.Float();
 	private final RoundRectangle2D.Float scratchShape = new RoundRectangle2D.Float();
+	private final Rectangle boxBounds = new Rectangle();
 	private final TargetColours targetColours = new TargetColours();
 
 	// Derived from the theme, rebuilt only when it changes.
@@ -88,11 +93,6 @@ final class MenuRenderer
 	private FontMetrics highlightMetrics;
 	private Map<String, Color> rules;
 	private boolean hideLevel;
-
-	static int headerHeight(Theme theme, BetterRightClickConfig config)
-	{
-		return theme.showHeader ? Limits.headerHeight(config) : 0;
-	}
 
 	/**
 	 * @param client null when not on the client thread; {@code <img>} tags are then skipped
@@ -153,12 +153,19 @@ final class MenuRenderer
 	private void renderMenu(Graphics2D graphics, BetterRightClickConfig config, List<Row> rows, Rectangle bounds,
 		int hoverIndex)
 	{
-		int headerHeight = headerHeight(theme, config);
 		int textOffsetX = Limits.textOffsetX(config);
 		int baselineNudge = Limits.baselineNudge(config);
 
-		drawShadow(graphics, bounds);
-		Shape shape = menuShape(bounds);
+		// Rows always sit on the game's click rows; hiding the header just trims the box above them.
+		Rectangle box = bounds;
+		if (!theme.showHeader)
+		{
+			box = boxBounds;
+			box.setBounds(bounds.x, bounds.y + HEADER_HEIGHT, bounds.width, bounds.height - HEADER_HEIGHT);
+		}
+
+		drawShadow(graphics, box);
+		Shape shape = menuShape(box);
 		graphics.setColor(bgColour);
 		graphics.fill(shape);
 
@@ -167,36 +174,35 @@ final class MenuRenderer
 		if (theme.showHeader)
 		{
 			graphics.setColor(headerColour);
-			graphics.fillRect(bounds.x, bounds.y, bounds.width, headerHeight);
+			graphics.fillRect(bounds.x, bounds.y, bounds.width, HEADER_HEIGHT);
 			graphics.setFont(font);
 			drawRun(graphics, metrics, HEADER_TEXT, bounds.x + textOffsetX,
-				bounds.y + centreOffset(headerHeight, baselineNudge), theme.headerText);
+				bounds.y + centreOffset(HEADER_HEIGHT, baselineNudge), theme.headerText);
 		}
-		drawRows(graphics, config, rows, bounds, hoverIndex, bounds.y + headerHeight, textOffsetX, baselineNudge);
+		drawRows(graphics, config, rows, bounds, hoverIndex, bounds.y + HEADER_HEIGHT, textOffsetX, baselineNudge);
 		graphics.setClip(previousClip);
 
-		drawBorder(graphics, bounds);
+		drawBorder(graphics, box);
 	}
 
 	private void drawRows(Graphics2D graphics, BetterRightClickConfig config, List<Row> rows, Rectangle bounds,
 		int hoverIndex, int firstRowY, int textOffsetX, int baselineNudge)
 	{
 		boolean showHitRows = config.showHitRows();
-		int rowHeight = Limits.rowHeight(config);
-		int rowTextOffsetY = centreOffset(rowHeight, baselineNudge);
+		int rowTextOffsetY = centreOffset(ROW_HEIGHT, baselineNudge);
 
 		for (int rowIndex = 0; rowIndex < rows.size(); rowIndex++)
 		{
-			int rowY = firstRowY + rowIndex * rowHeight;
+			int rowY = firstRowY + rowIndex * ROW_HEIGHT;
 			boolean hovered = rowIndex == hoverIndex;
 			if (hovered)
 			{
-				drawHover(graphics, bounds.x, rowY, bounds.width, rowHeight);
+				drawHover(graphics, bounds.x, rowY, bounds.width);
 			}
 			if (showHitRows)
 			{
 				graphics.setColor(HIT_ROW_COLOUR);
-				graphics.drawRect(bounds.x, rowY, bounds.width - 1, rowHeight - 1);
+				graphics.drawRect(bounds.x, rowY, bounds.width - 1, ROW_HEIGHT - 1);
 			}
 			layoutRow(graphics, rows.get(rowIndex), bounds.x + textOffsetX, rowY + rowTextOffsetY,
 				bounds.x + bounds.width, hovered);
@@ -328,24 +334,24 @@ final class MenuRenderer
 		}
 	}
 
-	private void drawHover(Graphics2D graphics, int x, int rowY, int width, int rowHeight)
+	private void drawHover(Graphics2D graphics, int x, int rowY, int width)
 	{
 		switch (theme.hoverStyle)
 		{
 			case FILL:
 				graphics.setColor(hoverColour);
-				graphics.fillRect(x, rowY, width, rowHeight);
+				graphics.fillRect(x, rowY, width, ROW_HEIGHT);
 				break;
 			case BAR:
 				graphics.setColor(hoverColour);
-				graphics.fillRect(x, rowY, width, rowHeight);
+				graphics.fillRect(x, rowY, width, ROW_HEIGHT);
 				graphics.setColor(theme.accent);
-				graphics.fillRect(x, rowY, HOVER_BAR_WIDTH, rowHeight);
+				graphics.fillRect(x, rowY, HOVER_BAR_WIDTH, ROW_HEIGHT);
 				break;
 			case OUTLINE:
 				graphics.setColor(theme.accent);
 				graphics.drawRect(x + OUTLINE_INSET, rowY + OUTLINE_INSET,
-					width - 1 - OUTLINE_INSET * 2, rowHeight - 1 - OUTLINE_INSET * 2);
+					width - 1 - OUTLINE_INSET * 2, ROW_HEIGHT - 1 - OUTLINE_INSET * 2);
 				break;
 			case TEXT:
 				// drawn as an accent-coloured option in layoutRow

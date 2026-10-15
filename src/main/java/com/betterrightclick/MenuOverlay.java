@@ -110,8 +110,7 @@ class MenuOverlay extends Overlay
 		// Fit the box to what we draw, never past the game's click area; X, Y and row heights stay the game's.
 		bounds.width = Math.min(bounds.width, renderer.measureWidth(graphics, client, theme, config, rows));
 
-		int hoverIndex = hoverIndex(client.getMouseCanvasPosition(), MenuRenderer.headerHeight(theme, config),
-			Limits.rowHeight(config));
+		int hoverIndex = hoverIndex(client.getMouseCanvasPosition());
 		Player local = client.getLocalPlayer();
 		int localLevel = local != null ? local.getCombatLevel() : 0;
 		renderer.render(graphics, client, theme, config, rows, bounds, hoverIndex, localLevel);
@@ -145,18 +144,18 @@ class MenuOverlay extends Overlay
 		}
 	}
 
-	private int hoverIndex(Point mouse, int headerHeight, int rowHeight)
+	private int hoverIndex(Point mouse)
 	{
 		if (mouse == null || mouse.getX() < bounds.x || mouse.getX() >= bounds.x + bounds.width)
 		{
 			return -1;
 		}
-		int relativeY = mouse.getY() - (bounds.y + headerHeight);
+		int relativeY = mouse.getY() - (bounds.y + MenuRenderer.HEADER_HEIGHT);
 		if (relativeY < 0)
 		{
 			return -1;
 		}
-		int index = relativeY / rowHeight;
+		int index = relativeY / MenuRenderer.ROW_HEIGHT;
 		return index < rows.size() ? index : -1;
 	}
 

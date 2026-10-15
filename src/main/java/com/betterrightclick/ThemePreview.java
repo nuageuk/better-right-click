@@ -46,6 +46,7 @@ class ThemePreview extends JPanel
 		this.themeManager = themeManager;
 		this.config = config;
 		setBackground(ColorScheme.DARKER_GRAY_COLOR);
+		localPlayer.setOnChange(this::repaint);
 
 		MouseAdapter mouse = new MouseAdapter()
 		{
@@ -77,7 +78,7 @@ class ThemePreview extends JPanel
 	@Override
 	public Dimension getPreferredSize()
 	{
-		return new Dimension(getWidth(), menuHeight(themeManager.effectiveTheme()) + TOP_MARGIN * 2);
+		return new Dimension(getWidth(), rowsTop(themeManager.effectiveTheme()) + rowsHeight() + TOP_MARGIN);
 	}
 
 	@Override
@@ -86,7 +87,9 @@ class ThemePreview extends JPanel
 		super.paintComponent(g);
 		Theme theme = themeManager.effectiveTheme();
 		int width = Math.max(MIN_MENU_WIDTH, getWidth() - SIDE_MARGIN * 2);
-		bounds.setBounds(SIDE_MARGIN, TOP_MARGIN, width, menuHeight(theme));
+		// The renderer always leaves room for the header, so shift up when it's hidden.
+		bounds.setBounds(SIDE_MARGIN, rowsTop(theme) - MenuRenderer.HEADER_HEIGHT, width,
+			MenuRenderer.HEADER_HEIGHT + rowsHeight());
 		Integer level = localPlayer.combatLevel();
 		renderer.render((Graphics2D) g, null, theme, config, SAMPLE_ROWS, bounds, hoverIndex,
 			level != null ? level : PLACEHOLDER_COMBAT_LEVEL);
@@ -94,8 +97,8 @@ class ThemePreview extends JPanel
 
 	private void updateHover(int mouseY)
 	{
-		int relativeY = mouseY - (TOP_MARGIN + MenuRenderer.headerHeight(themeManager.effectiveTheme(), config));
-		int index = relativeY < 0 ? -1 : relativeY / Limits.rowHeight(config);
+		int relativeY = mouseY - rowsTop(themeManager.effectiveTheme());
+		int index = relativeY < 0 ? -1 : relativeY / MenuRenderer.ROW_HEIGHT;
 		setHover(index < SAMPLE_ROWS.size() ? index : -1);
 	}
 
@@ -108,8 +111,13 @@ class ThemePreview extends JPanel
 		}
 	}
 
-	private int menuHeight(Theme theme)
+	private static int rowsTop(Theme theme)
 	{
-		return MenuRenderer.headerHeight(theme, config) + Limits.rowHeight(config) * SAMPLE_ROWS.size();
+		return TOP_MARGIN + (theme.showHeader ? MenuRenderer.HEADER_HEIGHT : 0);
+	}
+
+	private static int rowsHeight()
+	{
+		return MenuRenderer.ROW_HEIGHT * SAMPLE_ROWS.size();
 	}
 }
