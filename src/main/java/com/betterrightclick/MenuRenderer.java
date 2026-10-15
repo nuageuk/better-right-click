@@ -134,9 +134,8 @@ final class MenuRenderer
 		List<Row> rows, Rectangle bounds, int hoverIndex, int localCombatLevel, FontMetrics metrics,
 		int firstRowY, int textOffsetX, int baselineNudge)
 	{
-		boolean highlightsOn = config.highlightsEnabled();
-		FontMetrics highlightMetrics = highlightsOn && config.highlightsBold() ? graphics.getFontMetrics(boldFont) : metrics;
-		Map<String, Color> rules = highlightsOn ? rules(config.highlightRules()) : Collections.emptyMap();
+		FontMetrics highlightMetrics = highlightMetrics(graphics, config, metrics);
+		Map<String, Color> rules = highlightRules(config);
 		boolean showHitRows = config.showHitRows();
 		int rowHeight = Limits.rowHeight(config);
 		int rowTextOffsetY = centreOffset(rowHeight, metrics, baselineNudge);
@@ -200,7 +199,7 @@ final class MenuRenderer
 			return;
 		}
 		cursorX += metrics.charWidth(' ');
-		List<Run> runs = targetRuns(row.target);
+		List<Run> runs = targetRuns(row.target, targetColours.levelMode == CombatLevelMode.HIDE);
 		for (int i = 0; i < runs.size(); i++)
 		{
 			Run run = runs.get(i);
@@ -216,6 +215,62 @@ final class MenuRenderer
 			cursorX += drawRun(graphics, metrics, run.text, cursorX, textY, targetColours.resolve(run, row.kind),
 				theme.textShadow);
 		}
+	}
+
+	/**
+	 * Width of the widest row (and the header) plus horizontal padding, measured with combat levels
+	 * stripped. Used instead of the game's menu width when levels are hidden, since the game sizes
+	 * the menu from the full targets.
+	 */
+	int measureWidth(Graphics2D graphics, Client client, Theme theme, BetterRightClickConfig config, List<Row> rows)
+	{
+		updateThemeCache(theme, graphics);
+		FontMetrics metrics = graphics.getFontMetrics(font);
+		FontMetrics highlightMetrics = highlightMetrics(graphics, config, metrics);
+		Map<String, Color> rules = highlightRules(config);
+
+		int widest = theme.showHeader ? metrics.stringWidth(HEADER_TEXT) : 0;
+		for (Row row : rows)
+		{
+			OptionSegments option = optionSegments(row.option);
+			FontMetrics optionMetrics = rules.containsKey(option.key) ? highlightMetrics : metrics;
+			int width = runsWidth(client, optionMetrics, option.runs);
+			if (row.target != null && !row.target.isEmpty())
+			{
+				width += metrics.charWidth(' ') + runsWidth(client, metrics, targetRuns(row.target, true));
+			}
+			widest = Math.max(widest, width);
+		}
+		return widest + Limits.textOffsetX(config) * 2;
+	}
+
+	private int runsWidth(Client client, FontMetrics metrics, List<Run> runs)
+	{
+		int width = 0;
+		for (Run run : runs)
+		{
+			if (run.iconIndex < 0)
+			{
+				width += metrics.stringWidth(run.text);
+				continue;
+			}
+			BufferedImage icon = modIcon(client, run.iconIndex);
+			if (icon != null)
+			{
+				width += iconWidth(icon, iconHeight(metrics)) + ICON_GAP;
+			}
+		}
+		return width;
+	}
+
+	private FontMetrics highlightMetrics(Graphics2D graphics, BetterRightClickConfig config, FontMetrics metrics)
+	{
+		return config.highlightsEnabled() && config.highlightsBold() ? graphics.getFontMetrics(boldFont) : metrics;
+	}
+
+	private Map<String, Color> highlightRules(BetterRightClickConfig config)
+	{
+		return config.highlightsEnabled() ? rules(config.highlightRules()) : Collections.emptyMap();
 	}
 
 	private void updateThemeCache(Theme theme, Graphics2D graphics)
@@ -353,10 +408,20 @@ final class MenuRenderer
 		{
 			return 0;
 		}
-		int height = Math.max(1, metrics.getAscent());
-		int width = Math.max(1, icon.getWidth() * height / icon.getHeight());
+		int height = iconHeight(metrics);
+		int width = iconWidth(icon, height);
 		graphics.drawImage(icon, x, y - height, width, height, null);
 		return width + ICON_GAP;
+	}
+
+	private static int iconHeight(FontMetrics metrics)
+	{
+		return Math.max(1, metrics.getAscent());
+	}
+
+	private static int iconWidth(BufferedImage icon, int height)
+	{
+		return Math.max(1, icon.getWidth() * height / icon.getHeight());
 	}
 
 	private BufferedImage modIcon(Client client, int index)
@@ -449,10 +514,10 @@ final class MenuRenderer
 		return segments;
 	}
 
-	private List<Run> targetRuns(String raw)
+	private List<Run> targetRuns(String raw, boolean hideLevel)
 	{
 		String key = clean(raw);
-		if (targetColours.levelMode == CombatLevelMode.HIDE)
+		if (hideLevel)
 		{
 			key = stripLevel(key);
 		}
@@ -476,9 +541,8 @@ final class MenuRenderer
 
 	/**
 	 * Removes any {@code (level-N)} segment and the whitespace it leaves trailing the name.
-	 * Returns {@code target} itself when there is nothing to strip.
 	 */
-	static String stripLevel(String target)
+	private static String stripLevel(String target)
 	{
 		Matcher matcher = LEVEL.matcher(target);
 		if (!matcher.find())
