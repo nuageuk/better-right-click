@@ -1,4 +1,4 @@
-package com.menuthemes;
+package com.betterrightclick;
 
 import java.awt.BorderLayout;
 import java.awt.Dimension;

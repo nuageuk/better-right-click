@@ -1,4 +1,4 @@
-package com.menuthemes;
+package com.betterrightclick;
 
 /**
  * {@link #toString()} is overridden so {@code Text.titleCase} (used by combo box renderers)

@@ -1,4 +1,4 @@
-package com.menuthemes;
+package com.betterrightclick;
 
 import java.awt.Dimension;
 import java.awt.Graphics2D;
@@ -17,11 +17,11 @@ import net.runelite.client.ui.overlay.OverlayPosition;
 public class MenuOverlay extends Overlay
 {
 	private final Client client;
-	private final MenuThemesConfig config;
+	private final BetterRightClickConfig config;
 	private final ThemeManager themeManager;
 
 	@Inject
-	private MenuOverlay(Client client, MenuThemesConfig config, ThemeManager themeManager)
+	private MenuOverlay(Client client, BetterRightClickConfig config, ThemeManager themeManager)
 	{
 		this.client = client;
 		this.config = config;

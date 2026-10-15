@@ -1,4 +1,4 @@
-package com.menuthemes;
+package com.betterrightclick;
 
 import java.awt.Dimension;
 import java.awt.Graphics;
@@ -31,10 +31,10 @@ class ThemePreview extends JPanel
 
 	private final Client client;
 	private final ThemeManager themeManager;
-	private final MenuThemesConfig config;
+	private final BetterRightClickConfig config;
 	private int hoverIndex = -1;
 
-	ThemePreview(Client client, ThemeManager themeManager, MenuThemesConfig config)
+	ThemePreview(Client client, ThemeManager themeManager, BetterRightClickConfig config)
 	{
 		this.client = client;
 		this.themeManager = themeManager;

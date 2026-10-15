@@ -1,4 +1,4 @@
-package com.menuthemes;
+package com.betterrightclick;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
@@ -23,10 +23,10 @@ import net.runelite.client.config.ConfigManager;
 @Singleton
 class ThemeManager
 {
-	private static final String EXPORT_PREFIX = "menuthemes:";
+	private static final String EXPORT_PREFIX = "betterrightclick:";
 
 	private final ConfigManager configManager;
-	private final MenuThemesConfig config;
+	private final BetterRightClickConfig config;
 	private final Gson gson;
 
 	private final Map<String, Theme> userThemes = new LinkedHashMap<>();
@@ -39,7 +39,7 @@ class ThemeManager
 	private volatile Theme working = BuiltInThemes.find(BuiltInThemes.DEFAULT_ID);
 
 	@Inject
-	ThemeManager(ConfigManager configManager, MenuThemesConfig config, Gson gson)
+	ThemeManager(ConfigManager configManager, BetterRightClickConfig config, Gson gson)
 	{
 		this.configManager = configManager;
 		this.config = config;
@@ -137,7 +137,7 @@ class ThemeManager
 		}
 		activeId = id;
 		working = theme;
-		configManager.setConfiguration(MenuThemesConfig.GROUP, MenuThemesConfig.KEY_ACTIVE_THEME, activeId);
+		configManager.setConfiguration(BetterRightClickConfig.GROUP, BetterRightClickConfig.KEY_ACTIVE_THEME, activeId);
 	}
 
 	void save()
@@ -290,12 +290,12 @@ class ThemeManager
 		{
 			stored.add(StoredTheme.from(theme));
 		}
-		configManager.setConfiguration(MenuThemesConfig.GROUP, MenuThemesConfig.KEY_USER_THEMES, gson.toJson(stored));
+		configManager.setConfiguration(BetterRightClickConfig.GROUP, BetterRightClickConfig.KEY_USER_THEMES, gson.toJson(stored));
 	}
 
 	private void persistActiveId()
 	{
-		configManager.setConfiguration(MenuThemesConfig.GROUP, MenuThemesConfig.KEY_ACTIVE_THEME, activeId);
+		configManager.setConfiguration(BetterRightClickConfig.GROUP, BetterRightClickConfig.KEY_ACTIVE_THEME, activeId);
 	}
 
 	/**

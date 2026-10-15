@@ -1,4 +1,4 @@
-package com.menuthemes;
+package com.betterrightclick;
 
 import com.google.inject.Provides;
 import java.awt.Color;
@@ -19,9 +19,9 @@ import net.runelite.client.ui.NavigationButton;
 import net.runelite.client.ui.overlay.OverlayManager;
 
 @PluginDescriptor(
-	name = "Menu Themes"
+	name = "Better Right Click"
 )
-public class MenuThemesPlugin extends Plugin
+public class BetterRightClickPlugin extends Plugin
 {
 	private static final String INTERFACE_STYLES_GROUP = "interfaceStyles";
 	private static final String HD_MENU_KEY = "hdMenu";
@@ -46,7 +46,7 @@ public class MenuThemesPlugin extends Plugin
 	// called. A Swing-holding field would be constructed during the load phase - before the LAF is
 	// set - and would keep the default (light) Swing styling forever, since Swing never retroactively
 	// re-skins an existing component tree when the LAF changes later.
-	private MenuThemesPanel panel;
+	private BetterRightClickPanel panel;
 
 	private NavigationButton navigationButton;
 	private boolean warnedAboutHdMenu;
@@ -56,9 +56,9 @@ public class MenuThemesPlugin extends Plugin
 	{
 		overlayManager.add(menuOverlay);
 
-		panel = getInjector().getInstance(MenuThemesPanel.class);
+		panel = getInjector().getInstance(BetterRightClickPanel.class);
 		navigationButton = NavigationButton.builder()
-			.tooltip("Menu Themes")
+			.tooltip("Better Right Click")
 			.icon(createIcon())
 			.priority(5)
 			.panel(panel)
@@ -96,14 +96,14 @@ public class MenuThemesPlugin extends Plugin
 		if (!warnedAboutHdMenu && Boolean.parseBoolean(hdMenuValue))
 		{
 			warnedAboutHdMenu = true;
-			client.addChatMessage(ChatMessageType.GAMEMESSAGE, "", "Menu Themes: turn off Interface Styles' HD menu for best results.", null);
+			client.addChatMessage(ChatMessageType.GAMEMESSAGE, "", "Better Right Click: turn off Interface Styles' HD menu for best results.", null);
 		}
 	}
 
 	@Provides
-	MenuThemesConfig provideConfig(ConfigManager configManager)
+	BetterRightClickConfig provideConfig(ConfigManager configManager)
 	{
-		return configManager.getConfig(MenuThemesConfig.class);
+		return configManager.getConfig(BetterRightClickConfig.class);
 	}
 
 	private static BufferedImage createIcon()

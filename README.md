@@ -65,7 +65,7 @@ Interface Styles' HD menu option draws its own menu over this one. Turn it off a
 
 ## Development
 
-Clone the repository and open it in IntelliJ with JDK 11. Run the `MenuThemesPluginTest` configuration with `-ea` and `--developer-mode`. The run configuration is included in `.run/`.
+Clone the repository and open it in IntelliJ with JDK 11. Run the `BetterRightClickPluginTest` configuration with `-ea` and `--developer-mode`. The run configuration is included in `.run/`.
 
 ## License
 

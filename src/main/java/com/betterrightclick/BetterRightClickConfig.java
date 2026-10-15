@@ -1,4 +1,4 @@
-package com.menuthemes;
+package com.betterrightclick;
 
 import java.awt.Color;
 import net.runelite.client.config.Config;
@@ -9,10 +9,10 @@ import net.runelite.client.config.ConfigItem;
  * Every item here is hidden; the sidebar panel is the only editor. Theme-specific settings
  * (colours, geometry style, font, text shadow) live on {@link Theme} instead, not here.
  */
-@ConfigGroup(MenuThemesConfig.GROUP)
-public interface MenuThemesConfig extends Config
+@ConfigGroup(BetterRightClickConfig.GROUP)
+public interface BetterRightClickConfig extends Config
 {
-	String GROUP = "menuthemes";
+	String GROUP = "betterrightclick";
 
 	String KEY_USER_THEMES = "userThemes";
 	String KEY_ACTIVE_THEME = "activeTheme";

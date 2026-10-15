@@ -1,4 +1,4 @@
-package com.menuthemes;
+package com.betterrightclick;
 
 import java.awt.Color;
 import java.awt.Font;
@@ -40,7 +40,7 @@ final class MenuRenderer
 	{
 	}
 
-	static void render(Graphics2D graphics, Client client, Theme theme, MenuThemesConfig config,
+	static void render(Graphics2D graphics, Client client, Theme theme, BetterRightClickConfig config,
 		List<Row> rows, Rectangle bounds, int hoverIndex)
 	{
 		int x = bounds.x;
@@ -329,7 +329,7 @@ final class MenuRenderer
 		return rules;
 	}
 
-	private static Color resolveTargetColour(Run run, TargetKind kind, MenuThemesConfig config, Client client)
+	private static Color resolveTargetColour(Run run, TargetKind kind, BetterRightClickConfig config, Client client)
 	{
 		if (run.isLevel)
 		{

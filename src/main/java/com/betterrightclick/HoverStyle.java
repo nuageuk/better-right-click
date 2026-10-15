@@ -1,4 +1,4 @@
-package com.menuthemes;
+package com.betterrightclick;
 
 public enum HoverStyle
 {

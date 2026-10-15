@@ -1,4 +1,4 @@
-package com.menuthemes;
+package com.betterrightclick;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -55,11 +55,11 @@ import net.runelite.client.util.ColorUtil;
  * {@code PluginPanel} padding/layout, {@link ColorJButton} colour swatches, {@link TitleCaseListCellRenderer}
  * for enum combos, and {@link CollapsibleSection}s that mirror ConfigPanel's section chrome.
  */
-class MenuThemesPanel extends PluginPanel
+class BetterRightClickPanel extends PluginPanel
 {
 	private final Client client;
 	private final ThemeManager themeManager;
-	private final MenuThemesConfig config;
+	private final BetterRightClickConfig config;
 	private final ConfigManager configManager;
 	private final ColorPickerManager colorPickerManager;
 
@@ -78,7 +78,7 @@ class MenuThemesPanel extends PluginPanel
 	private boolean refreshing;
 
 	@Inject
-	MenuThemesPanel(Client client, ThemeManager themeManager, MenuThemesConfig config,
+	BetterRightClickPanel(Client client, ThemeManager themeManager, BetterRightClickConfig config,
 		ConfigManager configManager, ColorPickerManager colorPickerManager)
 	{
 		this.client = client;
@@ -351,12 +351,12 @@ class MenuThemesPanel extends PluginPanel
 
 		JCheckBox enabled = new JCheckBox();
 		enabled.setSelected(config.highlightsEnabled());
-		enabled.addActionListener(e -> configManager.setConfiguration(MenuThemesConfig.GROUP, "highlightsEnabled", enabled.isSelected()));
+		enabled.addActionListener(e -> configManager.setConfiguration(BetterRightClickConfig.GROUP, "highlightsEnabled", enabled.isSelected()));
 		section.addRow(row("Enabled", enabled));
 
 		JCheckBox bold = new JCheckBox();
 		bold.setSelected(config.highlightsBold());
-		bold.addActionListener(e -> configManager.setConfiguration(MenuThemesConfig.GROUP, "highlightsBold", bold.isSelected()));
+		bold.addActionListener(e -> configManager.setConfiguration(BetterRightClickConfig.GROUP, "highlightsBold", bold.isSelected()));
 		section.addRow(row("Bold", bold));
 
 		rulesPanel.setLayout(new DynamicGridLayout(0, 1, 0, 4));
@@ -400,7 +400,7 @@ class MenuThemesPanel extends PluginPanel
 		updateEnabled.run();
 		modeCombo.addActionListener(e ->
 		{
-			configManager.setConfiguration(MenuThemesConfig.GROUP, "targetMode", modeCombo.getSelectedItem());
+			configManager.setConfiguration(BetterRightClickConfig.GROUP, "targetMode", modeCombo.getSelectedItem());
 			updateEnabled.run();
 		});
 
@@ -435,7 +435,7 @@ class MenuThemesPanel extends PluginPanel
 		updateEnabled.run();
 		modeCombo.addActionListener(e ->
 		{
-			configManager.setConfiguration(MenuThemesConfig.GROUP, "combatLevelMode", modeCombo.getSelectedItem());
+			configManager.setConfiguration(BetterRightClickConfig.GROUP, "combatLevelMode", modeCombo.getSelectedItem());
 			updateEnabled.run();
 		});
 
@@ -457,7 +457,7 @@ class MenuThemesPanel extends PluginPanel
 
 		JCheckBox hitRows = new JCheckBox();
 		hitRows.setSelected(config.showHitRows());
-		hitRows.addActionListener(e -> configManager.setConfiguration(MenuThemesConfig.GROUP, "showHitRows", hitRows.isSelected()));
+		hitRows.addActionListener(e -> configManager.setConfiguration(BetterRightClickConfig.GROUP, "showHitRows", hitRows.isSelected()));
 		section.addRow(row("Show hit rows", hitRows));
 
 		return section;
@@ -465,14 +465,14 @@ class MenuThemesPanel extends PluginPanel
 
 	private Consumer<Color> globalColourWriter(String key)
 	{
-		return c -> configManager.setConfiguration(MenuThemesConfig.GROUP, key, c);
+		return c -> configManager.setConfiguration(BetterRightClickConfig.GROUP, key, c);
 	}
 
 	private JSpinner globalIntSpinner(int value, int min, int max, String key)
 	{
 		JSpinner spinner = new JSpinner(new SpinnerNumberModel(value, min, max, 1));
 		spinnerFieldWidth(spinner);
-		spinner.addChangeListener(e -> configManager.setConfiguration(MenuThemesConfig.GROUP, key, spinner.getValue()));
+		spinner.addChangeListener(e -> configManager.setConfiguration(BetterRightClickConfig.GROUP, key, spinner.getValue()));
 		return spinner;
 	}
 
@@ -534,7 +534,7 @@ class MenuThemesPanel extends PluginPanel
 			}
 			sb.append(rule.option.trim()).append('=').append(hex(rule.colour));
 		}
-		configManager.setConfiguration(MenuThemesConfig.GROUP, "highlightRules", sb.toString());
+		configManager.setConfiguration(BetterRightClickConfig.GROUP, "highlightRules", sb.toString());
 	}
 
 	private void addNewRule()
