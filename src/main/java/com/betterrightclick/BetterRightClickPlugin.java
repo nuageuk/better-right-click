@@ -51,11 +51,8 @@ public class BetterRightClickPlugin extends Plugin
 	@Inject
 	private LocalPlayerSnapshot localPlayer;
 
-	// Built in startUp(), not injected as a field: RuneLite's look-and-feel (RuneLiteLAF) is only
-	// installed by ClientUI.init(), which runs after plugins are loaded but before startUp() is
-	// called. A Swing-holding field would be constructed during the load phase - before the LAF is
-	// set - and would keep the default (light) Swing styling forever, since Swing never retroactively
-	// re-skins an existing component tree when the LAF changes later.
+	// Created in startUp() rather than injected: RuneLite installs its look and feel after plugins
+	// load, and Swing components built before that keep the default light styling.
 	private BetterRightClickPanel panel;
 	private NavigationButton navigationButton;
 	private boolean warnedAboutHdMenu;

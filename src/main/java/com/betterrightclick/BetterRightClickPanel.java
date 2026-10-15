@@ -52,9 +52,7 @@ import net.runelite.client.ui.components.colorpicker.RuneliteColorPicker;
 import net.runelite.client.util.ColorUtil;
 
 /**
- * Styled to match the native per-plugin config panel (ConfigPanel): relies on the same inherited
- * {@code PluginPanel} padding/layout, {@link ColorJButton} colour swatches, {@link TitleCaseListCellRenderer}
- * for enum combos, and {@link CollapsibleSection}s that mirror ConfigPanel's section chrome.
+ * Sidebar settings panel, styled to match RuneLite's own plugin config panel.
  */
 class BetterRightClickPanel extends PluginPanel
 {
@@ -372,9 +370,6 @@ class BetterRightClickPanel extends PluginPanel
 		return row(label, button);
 	}
 
-	/**
-	 * Applies a single edit to the working copy and refreshes every dependent view.
-	 */
 	private void apply(Function<Theme, Theme> mutator)
 	{
 		themeManager.setWorking(mutator.apply(themeManager.effectiveTheme()));
@@ -510,8 +505,7 @@ class BetterRightClickPanel extends PluginPanel
 	}
 
 	/**
-	 * Persists a global (non-theme) setting. The preview reads these from config, so it is
-	 * refreshed after every write.
+	 * Saves a global (non-theme) setting. The preview reads these from config, so refresh it after.
 	 */
 	private void setGlobal(String key, Object value)
 	{
@@ -550,7 +544,7 @@ class BetterRightClickPanel extends PluginPanel
 
 	/**
 	 * Writes every current rule to config, skipping blank option names. Blank rows stay in the
-	 * UI (and in {@link #rules}) while they're being edited - they just aren't persisted yet.
+	 * UI while they're being edited; they just aren't saved yet.
 	 */
 	private void persistRules()
 	{

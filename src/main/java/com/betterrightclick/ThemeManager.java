@@ -16,8 +16,8 @@ import net.runelite.client.config.ConfigManager;
 
 /**
  * Owns the built-in and user themes, which theme is active, and the "working copy" that the overlay
- * and the sidebar preview both render live as the user edits. User themes are persisted as JSON
- * (via the injected {@link Gson}) in the hidden {@code userThemes}/{@code activeTheme} config keys.
+ * and the sidebar preview both render live as the user edits. User themes are saved as JSON in
+ * the hidden {@code userThemes}/{@code activeTheme} config keys.
  * <p>
  * Everything except {@link #effectiveTheme()} is only touched from the EDT (the panel). The overlay
  * reads {@link #effectiveTheme()} on the client thread; {@link Theme} is immutable and the reference
@@ -225,9 +225,9 @@ class ThemeManager
 	}
 
 	/**
-	 * Called once, from the constructor, so every consumer Guice hands this singleton to - including
-	 * the sidebar panel, which reads it while building its own UI - sees the real saved state. Corrupt
-	 * config loads as defaults rather than failing startUp.
+	 * Called once from the constructor, so everything that uses this singleton (including the panel
+	 * while it builds its UI) sees the saved state. Corrupt config loads as defaults rather than
+	 * failing startUp.
 	 */
 	private void load()
 	{

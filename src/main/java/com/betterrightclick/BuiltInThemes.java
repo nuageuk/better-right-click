@@ -5,9 +5,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-/**
- * The locked, bundled themes.
- */
 final class BuiltInThemes
 {
 	static final List<Theme> ALL = Collections.unmodifiableList(Arrays.asList(

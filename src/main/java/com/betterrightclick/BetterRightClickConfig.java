@@ -6,8 +6,8 @@ import net.runelite.client.config.ConfigGroup;
 import net.runelite.client.config.ConfigItem;
 
 /**
- * Every item here is hidden; the sidebar panel is the only editor. Theme-specific settings
- * (colours, geometry style, font, text shadow) live on {@link Theme} instead, not here.
+ * Every item here is hidden; the sidebar panel is the only editor. Per-theme settings live on
+ * {@link Theme}.
  */
 @ConfigGroup(BetterRightClickConfig.GROUP)
 public interface BetterRightClickConfig extends Config

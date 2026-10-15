@@ -21,9 +21,7 @@ import net.runelite.client.util.ImageUtil;
 import net.runelite.client.util.SwingUtil;
 
 /**
- * A collapsible settings section, styled to match the native per-plugin config panel
- * (net.runelite.client.plugins.config.ConfigPanel): an arrow toggle, bold orange title, a
- * bottom separator, and a padded body that stacks rows top to bottom.
+ * A collapsible settings section, styled like the sections in RuneLite's plugin config panel.
  */
 class CollapsibleSection extends JPanel
 {

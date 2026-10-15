@@ -634,9 +634,8 @@ final class MenuRenderer
 	}
 
 	/**
-	 * One row to draw: an option, an optional target, and the target's classification (used for
-	 * Targets = Custom colouring). Both the overlay (from a real {@code MenuEntry}) and the sidebar
-	 * preview (hardcoded) build these.
+	 * One row to draw. The overlay builds these from real menu entries, the preview from fixed
+	 * samples. {@code kind} drives Custom target colouring.
 	 */
 	static final class Row
 	{
