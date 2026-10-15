@@ -19,6 +19,7 @@ class ThemePreview extends JPanel
 {
 	private static final int TOP_MARGIN = 10;
 	private static final int SIDE_MARGIN = 8;
+	private static final int MIN_MENU_WIDTH = 10;
 
 	private static final List<MenuRenderer.Row> SAMPLE_ROWS = Arrays.asList(
 		new MenuRenderer.Row("Attack", "<col=ffff00>Guard</col> <col=ffffff>(level-21)</col>", MenuRenderer.TargetKind.NPC),
@@ -32,6 +33,9 @@ class ThemePreview extends JPanel
 	private final Client client;
 	private final ThemeManager themeManager;
 	private final BetterRightClickConfig config;
+	private final MenuRenderer renderer = new MenuRenderer();
+	private final Rectangle bounds = new Rectangle();
+
 	private int hoverIndex = -1;
 
 	ThemePreview(Client client, ThemeManager themeManager, BetterRightClickConfig config)
@@ -59,12 +63,28 @@ class ThemePreview extends JPanel
 		addMouseListener(mouse);
 	}
 
+	@Override
+	public Dimension getPreferredSize()
+	{
+		return new Dimension(getWidth(), menuHeight(themeManager.effectiveTheme()) + TOP_MARGIN * 2);
+	}
+
+	@Override
+	protected void paintComponent(Graphics g)
+	{
+		super.paintComponent(g);
+		Theme theme = themeManager.effectiveTheme();
+		int width = Math.max(MIN_MENU_WIDTH, getWidth() - SIDE_MARGIN * 2);
+		bounds.setBounds(SIDE_MARGIN, TOP_MARGIN, width, menuHeight(theme));
+		renderer.render((Graphics2D) g, client, theme, config, SAMPLE_ROWS, bounds, hoverIndex);
+	}
+
 	private void updateHover(int mouseY)
 	{
 		Theme theme = themeManager.effectiveTheme();
-		int headerHeight = theme.showHeader ? config.headerHeight() : 0;
+		int headerHeight = theme.showHeader ? Limits.headerHeight(config) : 0;
 		int relativeY = mouseY - (TOP_MARGIN + headerHeight);
-		int idx = relativeY < 0 ? -1 : relativeY / config.rowHeight();
+		int idx = relativeY < 0 ? -1 : relativeY / Limits.rowHeight(config);
 		setHover(idx >= 0 && idx < SAMPLE_ROWS.size() ? idx : -1);
 	}
 
@@ -79,23 +99,7 @@ class ThemePreview extends JPanel
 
 	private int menuHeight(Theme theme)
 	{
-		int headerHeight = theme.showHeader ? config.headerHeight() : 0;
-		return headerHeight + config.rowHeight() * SAMPLE_ROWS.size();
-	}
-
-	@Override
-	public Dimension getPreferredSize()
-	{
-		return new Dimension(getWidth(), menuHeight(themeManager.effectiveTheme()) + TOP_MARGIN * 2);
-	}
-
-	@Override
-	protected void paintComponent(Graphics g)
-	{
-		super.paintComponent(g);
-		Theme theme = themeManager.effectiveTheme();
-		int width = Math.max(10, getWidth() - SIDE_MARGIN * 2);
-		Rectangle bounds = new Rectangle(SIDE_MARGIN, TOP_MARGIN, width, menuHeight(theme));
-		MenuRenderer.render((Graphics2D) g, client, theme, config, SAMPLE_ROWS, bounds, hoverIndex);
+		int headerHeight = theme.showHeader ? Limits.headerHeight(config) : 0;
+		return headerHeight + Limits.rowHeight(config) * SAMPLE_ROWS.size();
 	}
 }

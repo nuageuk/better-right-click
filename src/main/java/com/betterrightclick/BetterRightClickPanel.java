@@ -57,7 +57,14 @@ import net.runelite.client.util.ColorUtil;
  */
 class BetterRightClickPanel extends PluginPanel
 {
-	private final Client client;
+	private static final int ROW_GAP = 4;
+	private static final int SPINNER_COLUMNS = 4;
+	private static final int FIELD_PADDING = 4;
+	private static final Insets COMPACT_INSETS = new Insets(2, 2, 2, 2);
+	private static final Insets REMOVE_INSETS = new Insets(2, 6, 2, 6);
+	private static final Color NEW_RULE_COLOUR = new Color(0xFF9F1C);
+	private static final String NEW_RULE_OPTION = "New rule";
+
 	private final ThemeManager themeManager;
 	private final BetterRightClickConfig config;
 	private final ConfigManager configManager;
@@ -70,18 +77,19 @@ class BetterRightClickPanel extends PluginPanel
 
 	// Theme-bound controls; re-synced whenever the active/working theme changes.
 	private final List<Runnable> themeControlRefreshers = new ArrayList<>();
-	private JSpinner fontSizeSpinner;
 
 	private final JPanel rulesPanel = new JPanel();
-	private final List<Rule> rules = new ArrayList<>();
+	private final JButton addRuleButton = new JButton("+ Add rule");
+	// EDT only; the renderer reads the persisted config string, never this list.
+	private final List<EditableRule> rules = new ArrayList<>();
 
+	private JSpinner fontSizeSpinner;
 	private boolean refreshing;
 
 	@Inject
 	BetterRightClickPanel(Client client, ThemeManager themeManager, BetterRightClickConfig config,
 		ConfigManager configManager, ColorPickerManager colorPickerManager)
 	{
-		this.client = client;
 		this.themeManager = themeManager;
 		this.config = config;
 		this.configManager = configManager;
@@ -107,7 +115,7 @@ class BetterRightClickPanel extends PluginPanel
 	private JPanel buildThemeRow()
 	{
 		JPanel container = new JPanel();
-		container.setLayout(new DynamicGridLayout(0, 1, 0, 4));
+		container.setLayout(new DynamicGridLayout(0, 1, 0, ROW_GAP));
 
 		themeCombo.setRenderer(new DefaultListCellRenderer()
 		{
@@ -133,7 +141,7 @@ class BetterRightClickPanel extends PluginPanel
 		});
 		container.add(themeCombo);
 
-		JPanel buttons = new JPanel(new GridLayout(2, 2, 4, 4));
+		JPanel buttons = new JPanel(new GridLayout(2, 2, ROW_GAP, ROW_GAP));
 		saveButton.addActionListener(e ->
 		{
 			themeManager.save();
@@ -161,7 +169,7 @@ class BetterRightClickPanel extends PluginPanel
 	private static JButton compact(JButton button)
 	{
 		button.setFont(FontManager.getRunescapeSmallFont());
-		button.setMargin(new Insets(2, 2, 2, 2));
+		button.setMargin(COMPACT_INSETS);
 		return button;
 	}
 
@@ -169,14 +177,23 @@ class BetterRightClickPanel extends PluginPanel
 	{
 		JButton button = new JButton("More ▾");
 		button.setToolTipText("More theme actions");
+		JPopupMenu menu = buildMoreMenu();
+		button.addActionListener(e -> menu.show(button, 0, button.getHeight()));
+		return button;
+	}
 
+	private JPopupMenu buildMoreMenu()
+	{
 		JPopupMenu menu = new JPopupMenu();
 		JMenuItem renameItem = new JMenuItem("Rename");
 		renameItem.addActionListener(e -> promptRename());
 		JMenuItem duplicateItem = new JMenuItem("Duplicate");
 		duplicateItem.addActionListener(e ->
 		{
-			themeManager.duplicate();
+			if (!themeManager.duplicate())
+			{
+				showThemesFull();
+			}
 			refresh();
 		});
 		JMenuItem deleteItem = new JMenuItem("Delete");
@@ -213,9 +230,7 @@ class BetterRightClickPanel extends PluginPanel
 			{
 			}
 		});
-
-		button.addActionListener(e -> menu.show(button, 0, button.getHeight()));
-		return button;
+		return menu;
 	}
 
 	private static String themeLabel(Theme theme)
@@ -242,10 +257,10 @@ class BetterRightClickPanel extends PluginPanel
 	{
 		CollapsibleSection section = new CollapsibleSection("Style", "The active theme's shape and hover style", false);
 
-		JSpinner radiusSpinner = themeIntSpinner(t -> t.radius, Theme::withRadius, 0, 8);
+		JSpinner radiusSpinner = themeIntSpinner(t -> t.radius, Theme::withRadius, Limits.MIN_RADIUS, Limits.MAX_RADIUS);
 		section.addRow(row("Corner radius", radiusSpinner));
 
-		JSpinner opacitySpinner = themeIntSpinner(t -> t.opacity, Theme::withOpacity, 40, 100);
+		JSpinner opacitySpinner = themeIntSpinner(t -> t.opacity, Theme::withOpacity, Limits.MIN_OPACITY, Limits.MAX_OPACITY);
 		section.addRow(row("Opacity", opacitySpinner));
 
 		JComboBox<HoverStyle> hoverCombo = new JComboBox<>(HoverStyle.values());
@@ -285,7 +300,7 @@ class BetterRightClickPanel extends PluginPanel
 		themeControlRefreshers.add(() -> fontCombo.setSelectedItem(themeManager.effectiveTheme().font));
 		section.addRow(row("Font", fontCombo));
 
-		fontSizeSpinner = themeIntSpinner(t -> t.fontSize, Theme::withFontSize, 11, 13);
+		fontSizeSpinner = themeIntSpinner(t -> t.fontSize, Theme::withFontSize, Limits.MIN_FONT_SIZE, Limits.MAX_FONT_SIZE);
 		section.addRow(row("Font size", "Applies to the Sans and Mono fonts only", fontSizeSpinner));
 
 		section.addRow(row("Text shadow", themeCheckBox(t -> t.textShadow, Theme::withTextShadow)));
@@ -351,25 +366,26 @@ class BetterRightClickPanel extends PluginPanel
 
 		JCheckBox enabled = new JCheckBox();
 		enabled.setSelected(config.highlightsEnabled());
-		enabled.addActionListener(e -> configManager.setConfiguration(BetterRightClickConfig.GROUP, "highlightsEnabled", enabled.isSelected()));
+		enabled.addActionListener(e -> configManager.setConfiguration(BetterRightClickConfig.GROUP, BetterRightClickConfig.KEY_HIGHLIGHTS_ENABLED, enabled.isSelected()));
 		section.addRow(row("Enabled", enabled));
 
 		JCheckBox bold = new JCheckBox();
 		bold.setSelected(config.highlightsBold());
-		bold.addActionListener(e -> configManager.setConfiguration(BetterRightClickConfig.GROUP, "highlightsBold", bold.isSelected()));
+		bold.addActionListener(e -> configManager.setConfiguration(BetterRightClickConfig.GROUP, BetterRightClickConfig.KEY_HIGHLIGHTS_BOLD, bold.isSelected()));
 		section.addRow(row("Bold", bold));
 
-		rulesPanel.setLayout(new DynamicGridLayout(0, 1, 0, 4));
-		rules.addAll(parseRules());
-		for (Rule rule : rules)
+		rulesPanel.setLayout(new DynamicGridLayout(0, 1, 0, ROW_GAP));
+		for (HighlightRules.Rule parsed : HighlightRules.parse(config.highlightRules()))
 		{
+			EditableRule rule = new EditableRule(parsed.option, parsed.colour);
+			rules.add(rule);
 			rulesPanel.add(ruleRow(rule, false));
 		}
 		section.addRow(rulesPanel);
 
-		JButton addRule = new JButton("+ Add rule");
-		addRule.addActionListener(e -> addNewRule());
-		section.addRow(addRule);
+		addRuleButton.addActionListener(e -> addNewRule());
+		updateAddRuleEnabled();
+		section.addRow(addRuleButton);
 
 		return section;
 	}
@@ -382,11 +398,11 @@ class BetterRightClickPanel extends PluginPanel
 		modeCombo.setRenderer(new TitleCaseListCellRenderer());
 		modeCombo.setSelectedItem(config.targetMode());
 
-		ColorJButton npc = colourButton(config.npcColour(), "NPC colour", globalColourWriter("npcColour"));
-		ColorJButton player = colourButton(config.playerColour(), "Player colour", globalColourWriter("playerColour"));
-		ColorJButton item = colourButton(config.itemColour(), "Item colour", globalColourWriter("itemColour"));
-		ColorJButton object = colourButton(config.objectColour(), "Object colour", globalColourWriter("objectColour"));
-		ColorJButton other = colourButton(config.otherColour(), "Other colour", globalColourWriter("otherColour"));
+		ColorJButton npc = colourButton(config.npcColour(), "NPC colour", globalColourWriter(BetterRightClickConfig.KEY_NPC_COLOUR));
+		ColorJButton player = colourButton(config.playerColour(), "Player colour", globalColourWriter(BetterRightClickConfig.KEY_PLAYER_COLOUR));
+		ColorJButton item = colourButton(config.itemColour(), "Item colour", globalColourWriter(BetterRightClickConfig.KEY_ITEM_COLOUR));
+		ColorJButton object = colourButton(config.objectColour(), "Object colour", globalColourWriter(BetterRightClickConfig.KEY_OBJECT_COLOUR));
+		ColorJButton other = colourButton(config.otherColour(), "Other colour", globalColourWriter(BetterRightClickConfig.KEY_OTHER_COLOUR));
 
 		Runnable updateEnabled = () ->
 		{
@@ -400,7 +416,7 @@ class BetterRightClickPanel extends PluginPanel
 		updateEnabled.run();
 		modeCombo.addActionListener(e ->
 		{
-			configManager.setConfiguration(BetterRightClickConfig.GROUP, "targetMode", modeCombo.getSelectedItem());
+			configManager.setConfiguration(BetterRightClickConfig.GROUP, BetterRightClickConfig.KEY_TARGET_MODE, modeCombo.getSelectedItem());
 			updateEnabled.run();
 		});
 
@@ -421,9 +437,9 @@ class BetterRightClickPanel extends PluginPanel
 		modeCombo.setRenderer(new TitleCaseListCellRenderer());
 		modeCombo.setSelectedItem(config.combatLevelMode());
 
-		ColorJButton lower = colourButton(config.lowerLevelColour(), "Lower level colour", globalColourWriter("lowerLevelColour"));
-		ColorJButton same = colourButton(config.sameLevelColour(), "Same level colour", globalColourWriter("sameLevelColour"));
-		ColorJButton higher = colourButton(config.higherLevelColour(), "Higher level colour", globalColourWriter("higherLevelColour"));
+		ColorJButton lower = colourButton(config.lowerLevelColour(), "Lower level colour", globalColourWriter(BetterRightClickConfig.KEY_LOWER_LEVEL_COLOUR));
+		ColorJButton same = colourButton(config.sameLevelColour(), "Same level colour", globalColourWriter(BetterRightClickConfig.KEY_SAME_LEVEL_COLOUR));
+		ColorJButton higher = colourButton(config.higherLevelColour(), "Higher level colour", globalColourWriter(BetterRightClickConfig.KEY_HIGHER_LEVEL_COLOUR));
 
 		Runnable updateEnabled = () ->
 		{
@@ -435,7 +451,7 @@ class BetterRightClickPanel extends PluginPanel
 		updateEnabled.run();
 		modeCombo.addActionListener(e ->
 		{
-			configManager.setConfiguration(BetterRightClickConfig.GROUP, "combatLevelMode", modeCombo.getSelectedItem());
+			configManager.setConfiguration(BetterRightClickConfig.GROUP, BetterRightClickConfig.KEY_COMBAT_LEVEL_MODE, modeCombo.getSelectedItem());
 			updateEnabled.run();
 		});
 
@@ -450,14 +466,18 @@ class BetterRightClickPanel extends PluginPanel
 	{
 		CollapsibleSection section = new CollapsibleSection("Advanced", "Geometry and debugging", true);
 
-		section.addRow(row("Header height", globalIntSpinner(config.headerHeight(), 0, 60, "headerHeight")));
-		section.addRow(row("Row height", globalIntSpinner(config.rowHeight(), 5, 40, "rowHeight")));
-		section.addRow(row("Text offset X", globalIntSpinner(config.textOffsetX(), 0, 20, "textOffsetX")));
-		section.addRow(row("Baseline nudge", globalIntSpinner(config.baselineNudge(), -10, 10, "baselineNudge")));
+		section.addRow(row("Header height", globalIntSpinner(Limits.headerHeight(config),
+			Limits.MIN_HEADER_HEIGHT, Limits.MAX_HEADER_HEIGHT, BetterRightClickConfig.KEY_HEADER_HEIGHT)));
+		section.addRow(row("Row height", globalIntSpinner(Limits.rowHeight(config),
+			Limits.MIN_ROW_HEIGHT, Limits.MAX_ROW_HEIGHT, BetterRightClickConfig.KEY_ROW_HEIGHT)));
+		section.addRow(row("Text offset X", globalIntSpinner(Limits.textOffsetX(config),
+			Limits.MIN_TEXT_OFFSET_X, Limits.MAX_TEXT_OFFSET_X, BetterRightClickConfig.KEY_TEXT_OFFSET_X)));
+		section.addRow(row("Baseline nudge", globalIntSpinner(Limits.baselineNudge(config),
+			Limits.MIN_BASELINE_NUDGE, Limits.MAX_BASELINE_NUDGE, BetterRightClickConfig.KEY_BASELINE_NUDGE)));
 
 		JCheckBox hitRows = new JCheckBox();
 		hitRows.setSelected(config.showHitRows());
-		hitRows.addActionListener(e -> configManager.setConfiguration(BetterRightClickConfig.GROUP, "showHitRows", hitRows.isSelected()));
+		hitRows.addActionListener(e -> configManager.setConfiguration(BetterRightClickConfig.GROUP, BetterRightClickConfig.KEY_SHOW_HIT_ROWS, hitRows.isSelected()));
 		section.addRow(row("Show hit rows", hitRows));
 
 		return section;
@@ -478,41 +498,16 @@ class BetterRightClickPanel extends PluginPanel
 
 	// --- Action highlight rules editor ---
 
-	private static final class Rule
+	private static final class EditableRule
 	{
 		private String option;
 		private Color colour;
 
-		private Rule(String option, Color colour)
+		private EditableRule(String option, Color colour)
 		{
 			this.option = option;
 			this.colour = colour;
 		}
-	}
-
-	private List<Rule> parseRules()
-	{
-		List<Rule> parsed = new ArrayList<>();
-		for (String line : config.highlightRules().split("\n"))
-		{
-			int eq = line.lastIndexOf('=');
-			if (eq <= 0 || eq == line.length() - 1)
-			{
-				continue;
-			}
-			String option = line.substring(0, eq).trim();
-			String hex = line.substring(eq + 1).trim();
-			if (hex.startsWith("#"))
-			{
-				hex = hex.substring(1);
-			}
-			if (!hex.matches("[0-9a-fA-F]{6}"))
-			{
-				continue;
-			}
-			parsed.add(new Rule(option, Color.decode("#" + hex)));
-		}
-		return parsed;
 	}
 
 	/**
@@ -522,7 +517,7 @@ class BetterRightClickPanel extends PluginPanel
 	private void persistRules()
 	{
 		StringBuilder sb = new StringBuilder();
-		for (Rule rule : rules)
+		for (EditableRule rule : rules)
 		{
 			if (rule.option.trim().isEmpty())
 			{
@@ -534,27 +529,37 @@ class BetterRightClickPanel extends PluginPanel
 			}
 			sb.append(rule.option.trim()).append('=').append(hex(rule.colour));
 		}
-		configManager.setConfiguration(BetterRightClickConfig.GROUP, "highlightRules", sb.toString());
+		configManager.setConfiguration(BetterRightClickConfig.GROUP, BetterRightClickConfig.KEY_HIGHLIGHT_RULES, sb.toString());
 	}
 
 	private void addNewRule()
 	{
-		Rule rule = new Rule("New rule", new Color(0xFF9F1C));
+		if (rules.size() >= Limits.MAX_RULES)
+		{
+			return;
+		}
+		EditableRule rule = new EditableRule(NEW_RULE_OPTION, NEW_RULE_COLOUR);
 		rules.add(rule);
 		rulesPanel.add(ruleRow(rule, true));
 		rulesPanel.revalidate();
 		rulesPanel.repaint();
+		updateAddRuleEnabled();
 	}
 
-	private JPanel ruleRow(Rule rule, boolean focusField)
+	private void updateAddRuleEnabled()
 	{
-		JPanel panel = new JPanel(new BorderLayout(4, 0));
+		addRuleButton.setEnabled(rules.size() < Limits.MAX_RULES);
+	}
+
+	private JPanel ruleRow(EditableRule rule, boolean focusField)
+	{
+		JPanel panel = new JPanel(new BorderLayout(ROW_GAP, 0));
 
 		JTextField optionField = new JTextField(rule.option);
-		optionField.setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 4));
+		optionField.setBorder(BorderFactory.createEmptyBorder(FIELD_PADDING, FIELD_PADDING, FIELD_PADDING, FIELD_PADDING));
 		Runnable commit = () ->
 		{
-			rule.option = optionField.getText().trim();
+			rule.option = Limits.truncate(optionField.getText().trim(), Limits.MAX_RULE_OPTION_LENGTH);
 			persistRules();
 		};
 		optionField.addActionListener(e -> commit.run());
@@ -575,7 +580,7 @@ class BetterRightClickPanel extends PluginPanel
 
 		JButton remove = new JButton("✕");
 		remove.setToolTipText("Remove rule");
-		remove.setMargin(new Insets(2, 6, 2, 6));
+		remove.setMargin(REMOVE_INSETS);
 		remove.addActionListener(e ->
 		{
 			rules.remove(rule);
@@ -583,9 +588,10 @@ class BetterRightClickPanel extends PluginPanel
 			rulesPanel.revalidate();
 			rulesPanel.repaint();
 			persistRules();
+			updateAddRuleEnabled();
 		});
 
-		JPanel right = new JPanel(new BorderLayout(4, 0));
+		JPanel right = new JPanel(new BorderLayout(ROW_GAP, 0));
 		right.add(colourBtn, BorderLayout.WEST);
 		right.add(remove, BorderLayout.EAST);
 
@@ -666,7 +672,7 @@ class BetterRightClickPanel extends PluginPanel
 		Component editor = spinner.getEditor();
 		if (editor instanceof JSpinner.DefaultEditor)
 		{
-			((JSpinner.DefaultEditor) editor).getTextField().setColumns(4);
+			((JSpinner.DefaultEditor) editor).getTextField().setColumns(SPINNER_COLUMNS);
 		}
 	}
 
@@ -719,7 +725,10 @@ class BetterRightClickPanel extends PluginPanel
 		String name = JOptionPane.showInputDialog(this, "Theme name:", "Save as new theme", JOptionPane.PLAIN_MESSAGE);
 		if (name != null && !name.trim().isEmpty())
 		{
-			themeManager.saveAsNew(name.trim());
+			if (!themeManager.saveAsNew(name))
+			{
+				showThemesFull();
+			}
 			refresh();
 		}
 	}
@@ -729,7 +738,7 @@ class BetterRightClickPanel extends PluginPanel
 		String name = JOptionPane.showInputDialog(this, "New name:", themeManager.active().name);
 		if (name != null && !name.trim().isEmpty())
 		{
-			themeManager.rename(name.trim());
+			themeManager.rename(name);
 			refresh();
 		}
 	}
@@ -768,9 +777,9 @@ class BetterRightClickPanel extends PluginPanel
 				clipboardText = (String) clipboard.getData(DataFlavor.stringFlavor);
 			}
 		}
-		catch (UnsupportedFlavorException | IOException | IllegalStateException ignored)
+		catch (UnsupportedFlavorException | IOException | RuntimeException ignored)
 		{
-			// clipboard not readable; leave the field blank
+			// the clipboard is OS-owned and can fail in many ways; just leave the field blank
 		}
 
 		String payload = (String) JOptionPane.showInputDialog(this, "Paste exported theme:", "Import theme",
@@ -780,15 +789,17 @@ class BetterRightClickPanel extends PluginPanel
 			return;
 		}
 
-		try
+		String error = themeManager.importTheme(payload);
+		if (error != null)
 		{
-			themeManager.importTheme(payload);
-			refresh();
+			JOptionPane.showMessageDialog(this, error, "Import failed", JOptionPane.ERROR_MESSAGE);
+			return;
 		}
-		catch (IllegalArgumentException e)
-		{
-			JOptionPane.showMessageDialog(this, "That doesn't look like a valid exported theme.",
-				"Import failed", JOptionPane.ERROR_MESSAGE);
-		}
+		refresh();
+	}
+
+	private void showThemesFull()
+	{
+		JOptionPane.showMessageDialog(this, ThemeManager.ERROR_FULL, "Too many themes", JOptionPane.WARNING_MESSAGE);
 	}
 }

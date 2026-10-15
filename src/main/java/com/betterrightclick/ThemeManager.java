@@ -1,8 +1,6 @@
 package com.betterrightclick;
 
 import com.google.gson.Gson;
-import com.google.gson.JsonSyntaxException;
-import com.google.gson.reflect.TypeToken;
 import java.awt.Color;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -13,17 +11,29 @@ import java.util.Map;
 import java.util.UUID;
 import javax.inject.Inject;
 import javax.inject.Singleton;
+import lombok.extern.slf4j.Slf4j;
 import net.runelite.client.config.ConfigManager;
 
 /**
  * Owns the built-in and user themes, which theme is active, and the "working copy" that the overlay
  * and the sidebar preview both render live as the user edits. User themes are persisted as JSON
  * (via the injected {@link Gson}) in the hidden {@code userThemes}/{@code activeTheme} config keys.
+ * <p>
+ * Everything except {@link #effectiveTheme()} is only touched from the EDT (the panel). The overlay
+ * reads {@link #effectiveTheme()} on the client thread; {@link Theme} is immutable and the reference
+ * is volatile, so it always sees a complete theme.
  */
+@Slf4j
 @Singleton
 class ThemeManager
 {
 	private static final String EXPORT_PREFIX = "betterrightclick:";
+	private static final String DEFAULT_THEME_NAME = "Theme";
+	private static final String COPY_SUFFIX = " copy";
+
+	static final String ERROR_FULL = "You already have the maximum of " + Limits.MAX_USER_THEMES + " themes.";
+	private static final String ERROR_TOO_LONG = "That text is too long to be an exported theme.";
+	private static final String ERROR_INVALID = "That doesn't look like a valid exported theme.";
 
 	private final ConfigManager configManager;
 	private final BetterRightClickConfig config;
@@ -31,11 +41,6 @@ class ThemeManager
 
 	private final Map<String, Theme> userThemes = new LinkedHashMap<>();
 	private String activeId = BuiltInThemes.DEFAULT_ID;
-
-	/**
-	 * The theme actually drawn right now. Read by the overlay on the client thread and by the
-	 * sidebar preview on the EDT; written only from the EDT (the panel).
-	 */
 	private volatile Theme working = BuiltInThemes.find(BuiltInThemes.DEFAULT_ID);
 
 	@Inject
@@ -45,45 +50,6 @@ class ThemeManager
 		this.config = config;
 		this.gson = gson;
 		load();
-	}
-
-	/**
-	 * Loads saved state. Called once, from the constructor, so that every consumer Guice hands this
-	 * singleton to - including the sidebar panel, which reads it while building its own UI - sees
-	 * the real saved state rather than the hardcoded Dark-theme defaults.
-	 */
-	private void load()
-	{
-		userThemes.clear();
-		try
-		{
-			List<StoredTheme> stored = gson.fromJson(config.userThemes(), new TypeToken<List<StoredTheme>>()
-			{
-			}.getType());
-			if (stored != null)
-			{
-				for (StoredTheme s : stored)
-				{
-					Theme theme = s.toTheme();
-					if (theme != null)
-					{
-						userThemes.put(theme.id, theme);
-					}
-				}
-			}
-		}
-		catch (JsonSyntaxException e)
-		{
-			// corrupt config value; start with no user themes rather than failing to load
-		}
-
-		activeId = config.activeTheme();
-		working = find(activeId);
-		if (working == null)
-		{
-			activeId = BuiltInThemes.DEFAULT_ID;
-			working = BuiltInThemes.find(activeId);
-		}
 	}
 
 	Theme effectiveTheme()
@@ -122,10 +88,9 @@ class ThemeManager
 		return !sameStyle(working, active());
 	}
 
-	private Theme find(String id)
+	boolean isFull()
 	{
-		Theme builtIn = BuiltInThemes.find(id);
-		return builtIn != null ? builtIn : userThemes.get(id);
+		return userThemes.size() >= Limits.MAX_USER_THEMES;
 	}
 
 	void applyTheme(String id)
@@ -137,7 +102,7 @@ class ThemeManager
 		}
 		activeId = id;
 		working = theme;
-		configManager.setConfiguration(BetterRightClickConfig.GROUP, BetterRightClickConfig.KEY_ACTIVE_THEME, activeId);
+		persistActiveId();
 	}
 
 	void save()
@@ -153,16 +118,12 @@ class ThemeManager
 		persistUserThemes();
 	}
 
-	Theme saveAsNew(String name)
+	/**
+	 * @return false if the user theme limit has been reached
+	 */
+	boolean saveAsNew(String name)
 	{
-		String id = UUID.randomUUID().toString();
-		Theme theme = working.withIdentity(id, name, false);
-		userThemes.put(id, theme);
-		activeId = id;
-		working = theme;
-		persistUserThemes();
-		persistActiveId();
-		return theme;
+		return addAndActivate(working, name);
 	}
 
 	void revert()
@@ -170,49 +131,42 @@ class ThemeManager
 		working = active();
 	}
 
-	boolean rename(String newName)
+	void rename(String newName)
 	{
 		Theme active = userThemes.get(activeId);
 		if (active == null)
 		{
-			return false;
+			return;
 		}
-		Theme renamed = active.withIdentity(active.id, newName, false);
+		Theme renamed = active.withIdentity(active.id, cleanName(newName), false);
 		userThemes.put(renamed.id, renamed);
 		if (working.id.equals(active.id))
 		{
 			working = working.withIdentity(renamed.id, renamed.name, false);
 		}
 		persistUserThemes();
-		return true;
 	}
 
-	Theme duplicate()
+	/**
+	 * @return false if the user theme limit has been reached
+	 */
+	boolean duplicate()
 	{
 		Theme source = active();
-		String id = UUID.randomUUID().toString();
-		Theme copy = source.withIdentity(id, source.name + " copy", false);
-		userThemes.put(id, copy);
-		activeId = id;
-		working = copy;
-		persistUserThemes();
-		persistActiveId();
-		return copy;
+		return addAndActivate(source, source.name + COPY_SUFFIX);
 	}
 
-	boolean delete(String id)
+	void delete(String id)
 	{
-		Theme removed = userThemes.remove(id);
-		if (removed == null)
+		if (userThemes.remove(id) == null)
 		{
-			return false;
+			return;
 		}
 		persistUserThemes();
 		if (activeId.equals(id))
 		{
 			applyTheme(BuiltInThemes.DEFAULT_ID);
 		}
-		return true;
 	}
 
 	String export(String id)
@@ -227,50 +181,128 @@ class ThemeManager
 	}
 
 	/**
-	 * @throws IllegalArgumentException if the payload isn't a valid exported theme
+	 * Never throws.
+	 *
+	 * @return null on success, otherwise a message suitable for showing to the user
 	 */
-	Theme importTheme(String payload)
+	String importTheme(String payload)
 	{
-		String trimmed = payload.trim();
+		if (isFull())
+		{
+			return ERROR_FULL;
+		}
+		String trimmed = payload == null ? "" : payload.trim();
+		if (trimmed.length() > Limits.MAX_IMPORT_LENGTH)
+		{
+			return ERROR_TOO_LONG;
+		}
 		if (trimmed.startsWith(EXPORT_PREFIX))
 		{
 			trimmed = trimmed.substring(EXPORT_PREFIX.length());
 		}
 
-		String json;
+		Theme theme;
 		try
 		{
-			json = new String(Base64.getDecoder().decode(trimmed), StandardCharsets.UTF_8);
+			String json = new String(Base64.getDecoder().decode(trimmed), StandardCharsets.UTF_8);
+			StoredTheme stored = gson.fromJson(json, StoredTheme.class);
+			// an exported theme always carries an id; requiring one rejects arbitrary JSON objects
+			theme = stored == null || stored.id == null || stored.id.isEmpty()
+				? null : stored.toTheme(UUID.randomUUID().toString());
 		}
-		catch (IllegalArgumentException e)
+		catch (RuntimeException e)
 		{
-			throw new IllegalArgumentException("Not valid base64", e);
+			log.debug("Rejected theme import", e);
+			return ERROR_INVALID;
 		}
-
-		StoredTheme stored;
-		try
-		{
-			stored = gson.fromJson(json, StoredTheme.class);
-		}
-		catch (JsonSyntaxException e)
-		{
-			throw new IllegalArgumentException("Not a valid theme", e);
-		}
-
-		Theme theme = stored == null ? null : stored.toTheme();
 		if (theme == null)
 		{
-			throw new IllegalArgumentException("Not a valid theme");
+			return ERROR_INVALID;
 		}
 
+		addAndActivate(theme, theme.name);
+		return null;
+	}
+
+	/**
+	 * Called once, from the constructor, so every consumer Guice hands this singleton to - including
+	 * the sidebar panel, which reads it while building its own UI - sees the real saved state. Corrupt
+	 * config loads as defaults rather than failing startUp.
+	 */
+	private void load()
+	{
+		userThemes.clear();
+		try
+		{
+			StoredTheme[] stored = gson.fromJson(config.userThemes(), StoredTheme[].class);
+			if (stored != null)
+			{
+				for (StoredTheme s : stored)
+				{
+					if (userThemes.size() >= Limits.MAX_USER_THEMES)
+					{
+						break;
+					}
+					Theme theme = s == null || !isValidStoredId(s.id) ? null : s.toTheme(s.id);
+					if (theme != null)
+					{
+						userThemes.put(theme.id, theme);
+					}
+				}
+			}
+		}
+		catch (RuntimeException e)
+		{
+			log.warn("Saved Better Right Click themes are corrupt; starting with none", e);
+			userThemes.clear();
+		}
+
+		activeId = config.activeTheme();
+		Theme theme = find(activeId);
+		if (theme == null)
+		{
+			activeId = BuiltInThemes.DEFAULT_ID;
+			theme = BuiltInThemes.find(activeId);
+		}
+		working = theme;
+	}
+
+	private static boolean isValidStoredId(String id)
+	{
+		return id != null && !id.isEmpty() && id.length() <= Limits.MAX_THEME_ID_LENGTH
+			&& BuiltInThemes.find(id) == null;
+	}
+
+	private boolean addAndActivate(Theme source, String name)
+	{
+		if (isFull())
+		{
+			return false;
+		}
 		String id = UUID.randomUUID().toString();
-		Theme imported = theme.withIdentity(id, theme.name, false);
-		userThemes.put(id, imported);
+		Theme theme = source.withIdentity(id, cleanName(name), false);
+		userThemes.put(id, theme);
 		activeId = id;
-		working = imported;
+		working = theme;
 		persistUserThemes();
 		persistActiveId();
-		return imported;
+		return true;
+	}
+
+	private Theme find(String id)
+	{
+		if (id == null)
+		{
+			return null;
+		}
+		Theme builtIn = BuiltInThemes.find(id);
+		return builtIn != null ? builtIn : userThemes.get(id);
+	}
+
+	private static String cleanName(String name)
+	{
+		String trimmed = name == null ? "" : name.trim();
+		return trimmed.isEmpty() ? DEFAULT_THEME_NAME : Limits.truncate(trimmed, Limits.MAX_THEME_NAME_LENGTH);
 	}
 
 	private static boolean sameStyle(Theme a, Theme b)
@@ -299,29 +331,30 @@ class ThemeManager
 	}
 
 	/**
-	 * Gson-friendly shape for a theme: colours as plain RGB ints, enum as its name. Used for both
-	 * the persisted user theme list and the clipboard export/import format.
+	 * Gson-friendly shape for a theme: colours as plain ARGB ints, enums as names. Used for both the
+	 * persisted user theme list and the clipboard export/import format. Boxed fields so that values
+	 * missing from the JSON can be told apart and defaulted from the default built-in theme.
 	 */
 	private static final class StoredTheme
 	{
 		String id;
 		String name;
-		int bg;
-		int border;
-		int header;
-		int headerText;
-		int text;
-		int hover;
-		int accent;
-		int radius;
-		int opacity;
+		Integer bg;
+		Integer border;
+		Integer header;
+		Integer headerText;
+		Integer text;
+		Integer hover;
+		Integer accent;
+		Integer radius;
+		Integer opacity;
 		String hoverStyle;
-		boolean showBorder;
-		boolean showShadow;
-		boolean showHeader;
+		Boolean showBorder;
+		Boolean showShadow;
+		Boolean showHeader;
 		String font;
-		int fontSize;
-		boolean textShadow;
+		Integer fontSize;
+		Boolean textShadow;
 
 		static StoredTheme from(Theme t)
 		{
@@ -347,40 +380,43 @@ class ThemeManager
 			return s;
 		}
 
-		Theme toTheme()
+		Theme toTheme(String themeId)
 		{
-			if (id == null || id.isEmpty())
-			{
-				return null;
-			}
-			HoverStyle style;
-			try
-			{
-				style = HoverStyle.valueOf(hoverStyle);
-			}
-			catch (IllegalArgumentException | NullPointerException e)
-			{
-				style = HoverStyle.FILL;
-			}
-			FontChoice fontChoice;
-			try
-			{
-				fontChoice = FontChoice.valueOf(font);
-			}
-			catch (IllegalArgumentException | NullPointerException e)
-			{
-				fontChoice = FontChoice.RS_REGULAR;
-			}
-			return new Theme(id, name == null || name.isEmpty() ? "Theme" : name, false,
-				new Color(bg, true), new Color(border, true), new Color(header, true), new Color(headerText, true),
-				new Color(text, true), new Color(hover, true), new Color(accent, true),
-				clamp(radius, 0, 8), clamp(opacity, 40, 100), style, showBorder, showShadow, showHeader,
-				fontChoice, clamp(fontSize, 11, 13), textShadow);
+			Theme d = BuiltInThemes.find(BuiltInThemes.DEFAULT_ID);
+			return new Theme(themeId, cleanName(name), false,
+				colour(bg, d.bg), colour(border, d.border), colour(header, d.header),
+				colour(headerText, d.headerText), colour(text, d.text), colour(hover, d.hover),
+				colour(accent, d.accent),
+				Limits.clamp(radius != null ? radius : d.radius, Limits.MIN_RADIUS, Limits.MAX_RADIUS),
+				Limits.clamp(opacity != null ? opacity : d.opacity, Limits.MIN_OPACITY, Limits.MAX_OPACITY),
+				enumOr(HoverStyle.class, hoverStyle, d.hoverStyle),
+				showBorder != null ? showBorder : d.showBorder,
+				showShadow != null ? showShadow : d.showShadow,
+				showHeader != null ? showHeader : d.showHeader,
+				enumOr(FontChoice.class, font, d.font),
+				Limits.clamp(fontSize != null ? fontSize : d.fontSize, Limits.MIN_FONT_SIZE, Limits.MAX_FONT_SIZE),
+				textShadow != null ? textShadow : d.textShadow);
 		}
 
-		private static int clamp(int value, int min, int max)
+		private static Color colour(Integer argb, Color fallback)
 		{
-			return Math.max(min, Math.min(max, value));
+			return argb != null ? new Color(argb, true) : fallback;
+		}
+
+		private static <E extends Enum<E>> E enumOr(Class<E> type, String name, E fallback)
+		{
+			if (name == null)
+			{
+				return fallback;
+			}
+			try
+			{
+				return Enum.valueOf(type, name);
+			}
+			catch (IllegalArgumentException e)
+			{
+				return fallback;
+			}
 		}
 	}
 }

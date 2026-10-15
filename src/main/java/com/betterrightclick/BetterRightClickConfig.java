@@ -16,6 +16,24 @@ public interface BetterRightClickConfig extends Config
 
 	String KEY_USER_THEMES = "userThemes";
 	String KEY_ACTIVE_THEME = "activeTheme";
+	String KEY_HIGHLIGHTS_ENABLED = "highlightsEnabled";
+	String KEY_HIGHLIGHTS_BOLD = "highlightsBold";
+	String KEY_HIGHLIGHT_RULES = "highlightRules";
+	String KEY_TARGET_MODE = "targetMode";
+	String KEY_NPC_COLOUR = "npcColour";
+	String KEY_PLAYER_COLOUR = "playerColour";
+	String KEY_ITEM_COLOUR = "itemColour";
+	String KEY_OBJECT_COLOUR = "objectColour";
+	String KEY_OTHER_COLOUR = "otherColour";
+	String KEY_COMBAT_LEVEL_MODE = "combatLevelMode";
+	String KEY_LOWER_LEVEL_COLOUR = "lowerLevelColour";
+	String KEY_SAME_LEVEL_COLOUR = "sameLevelColour";
+	String KEY_HIGHER_LEVEL_COLOUR = "higherLevelColour";
+	String KEY_HEADER_HEIGHT = "headerHeight";
+	String KEY_ROW_HEIGHT = "rowHeight";
+	String KEY_TEXT_OFFSET_X = "textOffsetX";
+	String KEY_BASELINE_NUDGE = "baselineNudge";
+	String KEY_SHOW_HIT_ROWS = "showHitRows";
 
 	@ConfigItem(keyName = KEY_USER_THEMES, name = "", description = "", hidden = true)
 	default String userThemes()
@@ -31,19 +49,19 @@ public interface BetterRightClickConfig extends Config
 
 	// --- Action highlights ---
 
-	@ConfigItem(keyName = "highlightsEnabled", name = "", description = "", hidden = true)
+	@ConfigItem(keyName = KEY_HIGHLIGHTS_ENABLED, name = "", description = "", hidden = true)
 	default boolean highlightsEnabled()
 	{
 		return true;
 	}
 
-	@ConfigItem(keyName = "highlightsBold", name = "", description = "", hidden = true)
+	@ConfigItem(keyName = KEY_HIGHLIGHTS_BOLD, name = "", description = "", hidden = true)
 	default boolean highlightsBold()
 	{
 		return true;
 	}
 
-	@ConfigItem(keyName = "highlightRules", name = "", description = "", hidden = true)
+	@ConfigItem(keyName = KEY_HIGHLIGHT_RULES, name = "", description = "", hidden = true)
 	default String highlightRules()
 	{
 		return "Attack=#FF5C5C\nWalk here=#7D8590\nExamine=#7D8590";
@@ -51,37 +69,37 @@ public interface BetterRightClickConfig extends Config
 
 	// --- Targets ---
 
-	@ConfigItem(keyName = "targetMode", name = "", description = "", hidden = true)
+	@ConfigItem(keyName = KEY_TARGET_MODE, name = "", description = "", hidden = true)
 	default TargetMode targetMode()
 	{
 		return TargetMode.GAME;
 	}
 
-	@ConfigItem(keyName = "npcColour", name = "", description = "", hidden = true)
+	@ConfigItem(keyName = KEY_NPC_COLOUR, name = "", description = "", hidden = true)
 	default Color npcColour()
 	{
 		return new Color(0xFFFF00);
 	}
 
-	@ConfigItem(keyName = "playerColour", name = "", description = "", hidden = true)
+	@ConfigItem(keyName = KEY_PLAYER_COLOUR, name = "", description = "", hidden = true)
 	default Color playerColour()
 	{
 		return new Color(0xFFFFFF);
 	}
 
-	@ConfigItem(keyName = "itemColour", name = "", description = "", hidden = true)
+	@ConfigItem(keyName = KEY_ITEM_COLOUR, name = "", description = "", hidden = true)
 	default Color itemColour()
 	{
 		return new Color(0xFF9040);
 	}
 
-	@ConfigItem(keyName = "objectColour", name = "", description = "", hidden = true)
+	@ConfigItem(keyName = KEY_OBJECT_COLOUR, name = "", description = "", hidden = true)
 	default Color objectColour()
 	{
 		return new Color(0x00FFFF);
 	}
 
-	@ConfigItem(keyName = "otherColour", name = "", description = "", hidden = true)
+	@ConfigItem(keyName = KEY_OTHER_COLOUR, name = "", description = "", hidden = true)
 	default Color otherColour()
 	{
 		return new Color(0xFFFFFF);
@@ -89,25 +107,25 @@ public interface BetterRightClickConfig extends Config
 
 	// --- Combat levels ---
 
-	@ConfigItem(keyName = "combatLevelMode", name = "", description = "", hidden = true)
+	@ConfigItem(keyName = KEY_COMBAT_LEVEL_MODE, name = "", description = "", hidden = true)
 	default CombatLevelMode combatLevelMode()
 	{
 		return CombatLevelMode.GAME;
 	}
 
-	@ConfigItem(keyName = "lowerLevelColour", name = "", description = "", hidden = true)
+	@ConfigItem(keyName = KEY_LOWER_LEVEL_COLOUR, name = "", description = "", hidden = true)
 	default Color lowerLevelColour()
 	{
 		return new Color(0x00FF00);
 	}
 
-	@ConfigItem(keyName = "sameLevelColour", name = "", description = "", hidden = true)
+	@ConfigItem(keyName = KEY_SAME_LEVEL_COLOUR, name = "", description = "", hidden = true)
 	default Color sameLevelColour()
 	{
 		return new Color(0xFFFF00);
 	}
 
-	@ConfigItem(keyName = "higherLevelColour", name = "", description = "", hidden = true)
+	@ConfigItem(keyName = KEY_HIGHER_LEVEL_COLOUR, name = "", description = "", hidden = true)
 	default Color higherLevelColour()
 	{
 		return new Color(0xFF3030);
@@ -115,31 +133,31 @@ public interface BetterRightClickConfig extends Config
 
 	// --- Advanced (geometry) ---
 
-	@ConfigItem(keyName = "headerHeight", name = "", description = "", hidden = true)
+	@ConfigItem(keyName = KEY_HEADER_HEIGHT, name = "", description = "", hidden = true)
 	default int headerHeight()
 	{
 		return 19;
 	}
 
-	@ConfigItem(keyName = "rowHeight", name = "", description = "", hidden = true)
+	@ConfigItem(keyName = KEY_ROW_HEIGHT, name = "", description = "", hidden = true)
 	default int rowHeight()
 	{
 		return 15;
 	}
 
-	@ConfigItem(keyName = "textOffsetX", name = "", description = "", hidden = true)
+	@ConfigItem(keyName = KEY_TEXT_OFFSET_X, name = "", description = "", hidden = true)
 	default int textOffsetX()
 	{
 		return 3;
 	}
 
-	@ConfigItem(keyName = "baselineNudge", name = "", description = "", hidden = true)
+	@ConfigItem(keyName = KEY_BASELINE_NUDGE, name = "", description = "", hidden = true)
 	default int baselineNudge()
 	{
 		return 0;
 	}
 
-	@ConfigItem(keyName = "showHitRows", name = "", description = "", hidden = true)
+	@ConfigItem(keyName = KEY_SHOW_HIT_ROWS, name = "", description = "", hidden = true)
 	default boolean showHitRows()
 	{
 		return false;

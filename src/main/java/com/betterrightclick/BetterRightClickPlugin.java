@@ -9,6 +9,7 @@ import javax.inject.Inject;
 import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
 import net.runelite.api.events.BeforeMenuRender;
+import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.eventbus.Subscribe;
@@ -23,11 +24,26 @@ import net.runelite.client.ui.overlay.OverlayManager;
 )
 public class BetterRightClickPlugin extends Plugin
 {
+	private static final String NAME = "Better Right Click";
 	private static final String INTERFACE_STYLES_GROUP = "interfaceStyles";
 	private static final String HD_MENU_KEY = "hdMenu";
+	private static final String HD_MENU_WARNING = NAME + ": turn off Interface Styles' HD menu for best results.";
+	private static final int NAV_PRIORITY = 5;
+
+	private static final int ICON_SIZE = 16;
+	private static final int ICON_ARC = 3;
+	private static final int ICON_BAR_X = 3;
+	private static final int ICON_BAR_WIDTH = 10;
+	private static final int ICON_BAR_HEIGHT = 2;
+	private static final int[] ICON_BAR_YS = {4, 7, 10};
+	private static final Color ICON_BACKGROUND = new Color(0x2C313A);
+	private static final Color ICON_FOREGROUND = new Color(0x4C8DF6);
 
 	@Inject
 	private Client client;
+
+	@Inject
+	private ClientThread clientThread;
 
 	@Inject
 	private OverlayManager overlayManager;
@@ -47,20 +63,20 @@ public class BetterRightClickPlugin extends Plugin
 	// set - and would keep the default (light) Swing styling forever, since Swing never retroactively
 	// re-skins an existing component tree when the LAF changes later.
 	private BetterRightClickPanel panel;
-
 	private NavigationButton navigationButton;
 	private boolean warnedAboutHdMenu;
 
 	@Override
-	protected void startUp() throws Exception
+	protected void startUp()
 	{
+		menuOverlay.resetFailure();
 		overlayManager.add(menuOverlay);
 
 		panel = getInjector().getInstance(BetterRightClickPanel.class);
 		navigationButton = NavigationButton.builder()
-			.tooltip("Better Right Click")
+			.tooltip(NAME)
 			.icon(createIcon())
-			.priority(5)
+			.priority(NAV_PRIORITY)
 			.panel(panel)
 			.build();
 		clientToolbar.addNavigation(navigationButton);
@@ -69,17 +85,23 @@ public class BetterRightClickPlugin extends Plugin
 	}
 
 	@Override
-	protected void shutDown() throws Exception
+	protected void shutDown()
 	{
 		overlayManager.remove(menuOverlay);
 		clientToolbar.removeNavigation(navigationButton);
+		navigationButton = null;
 		panel = null;
+		warnedAboutHdMenu = false;
+		menuOverlay.resetFailure();
 	}
 
 	@Subscribe
 	public void onBeforeMenuRender(BeforeMenuRender event)
 	{
-		event.consume();
+		if (menuOverlay.shouldDraw())
+		{
+			event.consume();
+		}
 	}
 
 	@Subscribe
@@ -91,32 +113,35 @@ public class BetterRightClickPlugin extends Plugin
 		}
 	}
 
-	private void warnIfHdMenuEnabled(String hdMenuValue)
-	{
-		if (!warnedAboutHdMenu && Boolean.parseBoolean(hdMenuValue))
-		{
-			warnedAboutHdMenu = true;
-			client.addChatMessage(ChatMessageType.GAMEMESSAGE, "", "Better Right Click: turn off Interface Styles' HD menu for best results.", null);
-		}
-	}
-
 	@Provides
 	BetterRightClickConfig provideConfig(ConfigManager configManager)
 	{
 		return configManager.getConfig(BetterRightClickConfig.class);
 	}
 
+	// Called from startUp and ConfigChanged, neither of which is guaranteed to be on the client thread.
+	private void warnIfHdMenuEnabled(String hdMenuValue)
+	{
+		if (!warnedAboutHdMenu && Boolean.parseBoolean(hdMenuValue))
+		{
+			warnedAboutHdMenu = true;
+			clientThread.invokeLater(() ->
+				client.addChatMessage(ChatMessageType.GAMEMESSAGE, "", HD_MENU_WARNING, null));
+		}
+	}
+
 	private static BufferedImage createIcon()
 	{
-		BufferedImage icon = new BufferedImage(16, 16, BufferedImage.TYPE_INT_ARGB);
+		BufferedImage icon = new BufferedImage(ICON_SIZE, ICON_SIZE, BufferedImage.TYPE_INT_ARGB);
 		Graphics2D g = icon.createGraphics();
 		g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-		g.setColor(new Color(0x2C313A));
-		g.fillRoundRect(0, 0, 16, 16, 3, 3);
-		g.setColor(new Color(0x4C8DF6));
-		g.fillRect(3, 4, 10, 2);
-		g.fillRect(3, 7, 10, 2);
-		g.fillRect(3, 10, 10, 2);
+		g.setColor(ICON_BACKGROUND);
+		g.fillRoundRect(0, 0, ICON_SIZE, ICON_SIZE, ICON_ARC, ICON_ARC);
+		g.setColor(ICON_FOREGROUND);
+		for (int y : ICON_BAR_YS)
+		{
+			g.fillRect(ICON_BAR_X, y, ICON_BAR_WIDTH, ICON_BAR_HEIGHT);
+		}
 		g.dispose();
 		return icon;
 	}
