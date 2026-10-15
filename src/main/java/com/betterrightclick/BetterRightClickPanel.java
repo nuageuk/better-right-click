@@ -65,6 +65,9 @@ class BetterRightClickPanel extends PluginPanel
 	private static final String NEW_RULE_OPTION = "New rule";
 	// Holding a spinner arrow fires many changes; persist once it settles rather than on every step.
 	private static final int SPINNER_COMMIT_DELAY_MS = 300;
+	private static final String MORE_LABEL = "More ▾";
+	private static final String COPIED_LABEL = "Copied!";
+	private static final int COPIED_FLASH_MS = 1500;
 	private static final Consumer<Color> NOTHING = c ->
 	{
 	};
@@ -78,6 +81,9 @@ class BetterRightClickPanel extends PluginPanel
 	private final JComboBox<Theme> themeCombo = new JComboBox<>();
 	private final JButton saveButton = new JButton("Save");
 	private final JButton revertButton = new JButton("Revert");
+	private final JButton moreButton = new JButton(MORE_LABEL);
+	// Restarted on every export so a second click extends the flash instead of cutting it short.
+	private final Timer copiedFlash = new Timer(COPIED_FLASH_MS, e -> moreButton.setText(MORE_LABEL));
 
 	// Theme-bound controls; re-synced whenever the active/working theme changes.
 	private final List<Runnable> themeControlRefreshers = new ArrayList<>();
@@ -193,11 +199,11 @@ class BetterRightClickPanel extends PluginPanel
 
 	private JButton buildMoreButton()
 	{
-		JButton button = new JButton("More ▾");
-		button.setToolTipText("More theme actions");
+		moreButton.setToolTipText("More theme actions");
 		JPopupMenu menu = buildMoreMenu();
-		button.addActionListener(e -> menu.show(button, 0, button.getHeight()));
-		return button;
+		moreButton.addActionListener(e -> menu.show(moreButton, 0, moreButton.getHeight()));
+		copiedFlash.setRepeats(false);
+		return moreButton;
 	}
 
 	private JPopupMenu buildMoreMenu()
@@ -822,8 +828,19 @@ class BetterRightClickPanel extends PluginPanel
 		{
 			return;
 		}
-		Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
-		clipboard.setContents(new StringSelection(payload), null);
+		try
+		{
+			Toolkit.getDefaultToolkit().getSystemClipboard().setContents(new StringSelection(payload), null);
+		}
+		catch (RuntimeException e)
+		{
+			// the clipboard is OS-owned and can be unavailable or busy
+			JOptionPane.showMessageDialog(this, "Couldn't copy the theme to the clipboard.", "Export failed",
+				JOptionPane.ERROR_MESSAGE);
+			return;
+		}
+		moreButton.setText(COPIED_LABEL);
+		copiedFlash.restart();
 	}
 
 	private void promptImport()
