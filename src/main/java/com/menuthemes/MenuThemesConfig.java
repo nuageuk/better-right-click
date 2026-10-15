@@ -12,26 +12,9 @@ public interface MenuThemesConfig extends Config
 {
 	String GROUP = "menuthemes";
 
-	// Keys written by copyPresetToCustom() in MenuThemesPlugin; kept as constants to avoid typos.
-	String KEY_THEME = "theme";
-	String KEY_COPY_TO_CUSTOM = "copyPresetToCustom";
-	String KEY_BG = "bgColour";
-	String KEY_BORDER = "borderColour";
-	String KEY_HEADER = "headerColour";
-	String KEY_HEADER_TEXT = "headerTextColour";
-	String KEY_TEXT = "textColour";
-	String KEY_HOVER = "hoverColour";
-	String KEY_ACCENT = "accentColour";
-	String KEY_RADIUS = "cornerRadius";
-	String KEY_OPACITY = "opacity";
-	String KEY_HOVER_STYLE = "hoverStyle";
-
-	@ConfigSection(
-		name = "Theme",
-		description = "Presets and overall style",
-		position = 0
-	)
-	String themeSection = "themeSection";
+	// Theme storage; written by ThemeManager. Edited from the sidebar panel, not the config UI.
+	String KEY_USER_THEMES = "userThemes";
+	String KEY_ACTIVE_THEME = "activeTheme";
 
 	@ConfigSection(
 		name = "Text",
@@ -39,14 +22,6 @@ public interface MenuThemesConfig extends Config
 		position = 10
 	)
 	String textSection = "textSection";
-
-	@ConfigSection(
-		name = "Custom theme (Custom preset)",
-		description = "Only used when Preset is Custom",
-		position = 20,
-		closedByDefault = true
-	)
-	String coloursSection = "coloursSection";
 
 	@ConfigSection(
 		name = "Action highlights",
@@ -93,66 +68,26 @@ public interface MenuThemesConfig extends Config
 	)
 	String advancedSection = "advancedSection";
 
-	// --- Theme ---
-
 	@ConfigItem(
-		keyName = KEY_THEME,
-		name = "Preset",
-		description = "Selects a bundled theme to render. Choose Custom to use the keys below",
-		position = 1,
-		section = themeSection
+		keyName = KEY_USER_THEMES,
+		name = "",
+		description = "",
+		hidden = true
 	)
-	default Preset theme()
+	default String userThemes()
 	{
-		return Preset.DARK;
+		return "[]";
 	}
 
 	@ConfigItem(
-		keyName = KEY_COPY_TO_CUSTOM,
-		name = "Copy preset to Custom",
-		description = "Copies the selected preset's values into the Custom theme keys below, then switches to Custom",
-		position = 2,
-		section = themeSection
+		keyName = KEY_ACTIVE_THEME,
+		name = "",
+		description = "",
+		hidden = true
 	)
-	default boolean copyPresetToCustom()
+	default String activeTheme()
 	{
-		return false;
-	}
-
-	@ConfigItem(
-		keyName = "borderEnabled",
-		name = "Border",
-		description = "Draw a border around the menu",
-		position = 3,
-		section = themeSection
-	)
-	default boolean borderEnabled()
-	{
-		return true;
-	}
-
-	@ConfigItem(
-		keyName = "dropShadowEnabled",
-		name = "Drop shadow",
-		description = "Draw a soft drop shadow behind the menu",
-		position = 4,
-		section = themeSection
-	)
-	default boolean dropShadowEnabled()
-	{
-		return false;
-	}
-
-	@ConfigItem(
-		keyName = "headerEnabled",
-		name = "Header",
-		description = "Show the \"Choose Option\" header",
-		position = 5,
-		section = themeSection
-	)
-	default boolean headerEnabled()
-	{
-		return true;
+		return BuiltInThemes.DEFAULT_ID;
 	}
 
 	// --- Text ---
@@ -192,130 +127,6 @@ public interface MenuThemesConfig extends Config
 	default boolean textShadow()
 	{
 		return true;
-	}
-
-	// --- Colours ---
-
-	@ConfigItem(
-		keyName = KEY_BG,
-		name = "Background",
-		description = "Background colour of the menu",
-		position = 1,
-		section = coloursSection
-	)
-	default Color bgColour()
-	{
-		return new Color(0x16181D);
-	}
-
-	@ConfigItem(
-		keyName = KEY_BORDER,
-		name = "Border",
-		description = "Border colour of the menu",
-		position = 2,
-		section = coloursSection
-	)
-	default Color borderColour()
-	{
-		return new Color(0x2C313A);
-	}
-
-	@ConfigItem(
-		keyName = KEY_HEADER,
-		name = "Header background",
-		description = "Background colour of the \"Choose Option\" header",
-		position = 3,
-		section = coloursSection
-	)
-	default Color headerColour()
-	{
-		return new Color(0x0F1115);
-	}
-
-	@ConfigItem(
-		keyName = KEY_HEADER_TEXT,
-		name = "Header text",
-		description = "Text colour of the \"Choose Option\" header",
-		position = 4,
-		section = coloursSection
-	)
-	default Color headerTextColour()
-	{
-		return new Color(0x8A93A3);
-	}
-
-	@ConfigItem(
-		keyName = KEY_TEXT,
-		name = "Option text",
-		description = "Text colour of menu entry options",
-		position = 5,
-		section = coloursSection
-	)
-	default Color textColour()
-	{
-		return new Color(0xE6E9EF);
-	}
-
-	@ConfigItem(
-		keyName = KEY_HOVER,
-		name = "Hover",
-		description = "Colour used to highlight the hovered menu entry",
-		position = 6,
-		section = coloursSection
-	)
-	default Color hoverColour()
-	{
-		return new Color(0x2A3140);
-	}
-
-	@ConfigItem(
-		keyName = KEY_ACCENT,
-		name = "Accent",
-		description = "Accent colour used by some hover styles and action highlights",
-		position = 7,
-		section = coloursSection
-	)
-	default Color accentColour()
-	{
-		return new Color(0x4C8DF6);
-	}
-
-	@Range(min = 0, max = 8)
-	@ConfigItem(
-		keyName = KEY_RADIUS,
-		name = "Corner radius",
-		description = "Corner radius of the menu",
-		position = 8,
-		section = coloursSection
-	)
-	default int cornerRadius()
-	{
-		return 6;
-	}
-
-	@Range(min = 40, max = 100)
-	@ConfigItem(
-		keyName = KEY_OPACITY,
-		name = "Opacity",
-		description = "Opacity of the background, header and hover fills",
-		position = 9,
-		section = coloursSection
-	)
-	default int opacity()
-	{
-		return 96;
-	}
-
-	@ConfigItem(
-		keyName = KEY_HOVER_STYLE,
-		name = "Hover style",
-		description = "How the hovered menu entry is highlighted",
-		position = 10,
-		section = coloursSection
-	)
-	default HoverStyle hoverStyle()
-	{
-		return HoverStyle.FILL;
 	}
 
 	// --- Action highlights ---

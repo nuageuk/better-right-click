@@ -1,6 +1,10 @@
 package com.menuthemes;
 
 import com.google.inject.Provides;
+import java.awt.Color;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
+import java.awt.image.BufferedImage;
 import javax.inject.Inject;
 import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
@@ -10,6 +14,8 @@ import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
+import net.runelite.client.ui.ClientToolbar;
+import net.runelite.client.ui.NavigationButton;
 import net.runelite.client.ui.overlay.OverlayManager;
 
 @PluginDescriptor(
@@ -30,17 +36,30 @@ public class MenuThemesPlugin extends Plugin
 	private MenuOverlay menuOverlay;
 
 	@Inject
-	private MenuThemesConfig config;
-
-	@Inject
 	private ConfigManager configManager;
 
+	@Inject
+	private ClientToolbar clientToolbar;
+
+	@Inject
+	private MenuThemesPanel panel;
+
+	private NavigationButton navigationButton;
 	private boolean warnedAboutHdMenu;
 
 	@Override
 	protected void startUp() throws Exception
 	{
 		overlayManager.add(menuOverlay);
+
+		navigationButton = NavigationButton.builder()
+			.tooltip("Menu Themes")
+			.icon(createIcon())
+			.priority(5)
+			.panel(panel)
+			.build();
+		clientToolbar.addNavigation(navigationButton);
+
 		warnIfHdMenuEnabled(configManager.getConfiguration(INTERFACE_STYLES_GROUP, HD_MENU_KEY));
 	}
 
@@ -48,6 +67,7 @@ public class MenuThemesPlugin extends Plugin
 	protected void shutDown() throws Exception
 	{
 		overlayManager.remove(menuOverlay);
+		clientToolbar.removeNavigation(navigationButton);
 	}
 
 	@Subscribe
@@ -59,15 +79,7 @@ public class MenuThemesPlugin extends Plugin
 	@Subscribe
 	public void onConfigChanged(ConfigChanged event)
 	{
-		if (MenuThemesConfig.GROUP.equals(event.getGroup()))
-		{
-			menuOverlay.invalidateTheme();
-			if (MenuThemesConfig.KEY_COPY_TO_CUSTOM.equals(event.getKey()) && Boolean.parseBoolean(event.getNewValue()))
-			{
-				copyPresetToCustom();
-			}
-		}
-		else if (INTERFACE_STYLES_GROUP.equals(event.getGroup()) && HD_MENU_KEY.equals(event.getKey()))
+		if (INTERFACE_STYLES_GROUP.equals(event.getGroup()) && HD_MENU_KEY.equals(event.getKey()))
 		{
 			warnIfHdMenuEnabled(event.getNewValue());
 		}
@@ -82,29 +94,24 @@ public class MenuThemesPlugin extends Plugin
 		}
 	}
 
-	private void copyPresetToCustom()
-	{
-		Preset preset = config.theme();
-		if (preset != Preset.CUSTOM)
-		{
-			configManager.setConfiguration(MenuThemesConfig.GROUP, MenuThemesConfig.KEY_BG, preset.bg);
-			configManager.setConfiguration(MenuThemesConfig.GROUP, MenuThemesConfig.KEY_BORDER, preset.border);
-			configManager.setConfiguration(MenuThemesConfig.GROUP, MenuThemesConfig.KEY_HEADER, preset.header);
-			configManager.setConfiguration(MenuThemesConfig.GROUP, MenuThemesConfig.KEY_HEADER_TEXT, preset.headerText);
-			configManager.setConfiguration(MenuThemesConfig.GROUP, MenuThemesConfig.KEY_TEXT, preset.text);
-			configManager.setConfiguration(MenuThemesConfig.GROUP, MenuThemesConfig.KEY_HOVER, preset.hover);
-			configManager.setConfiguration(MenuThemesConfig.GROUP, MenuThemesConfig.KEY_ACCENT, preset.accent);
-			configManager.setConfiguration(MenuThemesConfig.GROUP, MenuThemesConfig.KEY_RADIUS, preset.radius);
-			configManager.setConfiguration(MenuThemesConfig.GROUP, MenuThemesConfig.KEY_OPACITY, preset.opacity);
-			configManager.setConfiguration(MenuThemesConfig.GROUP, MenuThemesConfig.KEY_HOVER_STYLE, preset.hoverStyle);
-			configManager.setConfiguration(MenuThemesConfig.GROUP, MenuThemesConfig.KEY_THEME, Preset.CUSTOM);
-		}
-		configManager.setConfiguration(MenuThemesConfig.GROUP, MenuThemesConfig.KEY_COPY_TO_CUSTOM, false);
-	}
-
 	@Provides
 	MenuThemesConfig provideConfig(ConfigManager configManager)
 	{
 		return configManager.getConfig(MenuThemesConfig.class);
+	}
+
+	private static BufferedImage createIcon()
+	{
+		BufferedImage icon = new BufferedImage(16, 16, BufferedImage.TYPE_INT_ARGB);
+		Graphics2D g = icon.createGraphics();
+		g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+		g.setColor(new Color(0x2C313A));
+		g.fillRoundRect(0, 0, 16, 16, 3, 3);
+		g.setColor(new Color(0x4C8DF6));
+		g.fillRect(3, 4, 10, 2);
+		g.fillRect(3, 7, 10, 2);
+		g.fillRect(3, 10, 10, 2);
+		g.dispose();
+		return icon;
 	}
 }
