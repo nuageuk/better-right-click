@@ -52,6 +52,9 @@ public class BetterRightClickPlugin extends Plugin
 	private ConfigManager configManager;
 
 	@Inject
+	private BetterRightClickConfig config;
+
+	@Inject
 	private ClientToolbar clientToolbar;
 
 	@Inject
@@ -61,7 +64,8 @@ public class BetterRightClickPlugin extends Plugin
 	// load, and Swing components built before that keep the default light styling. Volatile because
 	// ConfigChanged can arrive on any thread.
 	private volatile BetterRightClickPanel panel;
-	private NavigationButton navigationButton;
+	// Volatile because ConfigChanged can arrive on any thread.
+	private volatile NavigationButton navigationButton;
 	// Once per session, and only once it could actually be seen. Client thread only, apart from the
 	// reset in shutDown.
 	private volatile boolean warnedAboutHdMenu;
@@ -78,7 +82,7 @@ public class BetterRightClickPlugin extends Plugin
 			.priority(NAV_PRIORITY)
 			.panel(panel)
 			.build();
-		clientToolbar.addNavigation(navigationButton);
+		updateSidebarButton();
 
 		menuOverlay.resetFailure();
 		overlayManager.add(menuOverlay);
@@ -138,6 +142,12 @@ public class BetterRightClickPlugin extends Plugin
 	@Subscribe
 	public void onConfigChanged(ConfigChanged event)
 	{
+		if (BetterRightClickConfig.GROUP.equals(event.getGroup())
+			&& BetterRightClickConfig.KEY_SHOW_SIDEBAR_BUTTON.equals(event.getKey()))
+		{
+			updateSidebarButton();
+			return;
+		}
 		if ((INTERFACE_STYLES_GROUP.equals(event.getGroup()) && HD_MENU_KEY.equals(event.getKey()))
 			|| (RuneLiteConfig.GROUP_NAME.equals(event.getGroup()) && INTERFACE_STYLES_PLUGIN_KEY.equals(event.getKey())))
 		{
@@ -149,6 +159,24 @@ public class BetterRightClickPlugin extends Plugin
 	BetterRightClickConfig provideConfig(ConfigManager configManager)
 	{
 		return configManager.getConfig(BetterRightClickConfig.class);
+	}
+
+	// ClientToolbar hands both calls to the EDT, and adding or removing twice is harmless.
+	private void updateSidebarButton()
+	{
+		NavigationButton button = navigationButton;
+		if (button == null)
+		{
+			return;
+		}
+		if (config.showSidebarButton())
+		{
+			clientToolbar.addNavigation(button);
+		}
+		else
+		{
+			clientToolbar.removeNavigation(button);
+		}
 	}
 
 	/**

@@ -6,8 +6,8 @@ import net.runelite.client.config.ConfigGroup;
 import net.runelite.client.config.ConfigItem;
 
 /**
- * Every item here is hidden; the sidebar panel is the only editor. Per-theme settings live on
- * {@link Theme}.
+ * Every item but the sidebar button toggle is hidden; the sidebar panel is the editor. That toggle
+ * has to live here, since turning it off hides the panel. Per-theme settings live on {@link Theme}.
  */
 @ConfigGroup(BetterRightClickConfig.GROUP)
 public interface BetterRightClickConfig extends Config
@@ -32,6 +32,17 @@ public interface BetterRightClickConfig extends Config
 	String KEY_TEXT_OFFSET_X = "textOffsetX";
 	String KEY_BASELINE_NUDGE = "baselineNudge";
 	String KEY_SHOW_HIT_ROWS = "showHitRows";
+	String KEY_SHOW_SIDEBAR_BUTTON = "showSidebarButton";
+
+	@ConfigItem(
+		keyName = KEY_SHOW_SIDEBAR_BUTTON,
+		name = "Show sidebar button",
+		description = "Show the Better Right Click button in the RuneLite sidebar"
+	)
+	default boolean showSidebarButton()
+	{
+		return true;
+	}
 
 	@ConfigItem(keyName = KEY_USER_THEMES, name = "", description = "", hidden = true)
 	default String userThemes()
