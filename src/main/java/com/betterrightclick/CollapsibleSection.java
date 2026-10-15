@@ -25,62 +25,64 @@ import net.runelite.client.util.SwingUtil;
  */
 class CollapsibleSection extends JPanel
 {
+	// Sizes and the arrow's darkening match ConfigPanel's sections.
+	private static final int ARROW_LUMINANCE_OFFSET = -121;
+	private static final int TOGGLE_WIDTH = 18;
+	private static final int TOGGLE_GAP = 5;
+	private static final int HEADER_BOTTOM_PADDING = 3;
+	private static final int HEADER_RIGHT_PADDING = 1;
+	private static final int BODY_PADDING = 8;
+	private static final int ROW_GAP = 5;
+
 	private static final ImageIcon EXPAND_ICON;
 	private static final ImageIcon RETRACT_ICON;
 
 	static
 	{
 		BufferedImage arrow = ImageUtil.loadImageResource(CollapsibleSection.class, "/util/arrow_right.png");
-		arrow = ImageUtil.luminanceOffset(arrow, -121);
+		arrow = ImageUtil.luminanceOffset(arrow, ARROW_LUMINANCE_OFFSET);
 		EXPAND_ICON = new ImageIcon(arrow);
 		RETRACT_ICON = new ImageIcon(ImageUtil.rotateImage(arrow, Math.PI / 2));
 	}
 
 	private final JPanel body = new JPanel();
-	private final JButton toggle;
+	private final JButton toggle = new JButton();
 
 	CollapsibleSection(String name, String description, boolean closedByDefault)
 	{
 		setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
 
-		boolean open = !closedByDefault;
-
 		JPanel header = new JPanel(new BorderLayout());
 		header.setBorder(new CompoundBorder(
 			new MatteBorder(0, 0, 1, 0, ColorScheme.MEDIUM_GRAY_COLOR),
-			new EmptyBorder(0, 0, 3, 1)));
+			new EmptyBorder(0, 0, HEADER_BOTTOM_PADDING, HEADER_RIGHT_PADDING)));
 
-		toggle = new JButton(open ? RETRACT_ICON : EXPAND_ICON);
-		toggle.setPreferredSize(new Dimension(18, 0));
-		toggle.setBorder(new EmptyBorder(0, 0, 0, 5));
-		toggle.setToolTipText(open ? "Retract" : "Expand");
+		toggle.setPreferredSize(new Dimension(TOGGLE_WIDTH, 0));
+		toggle.setBorder(new EmptyBorder(0, 0, 0, TOGGLE_GAP));
 		SwingUtil.removeButtonDecorations(toggle);
 		header.add(toggle, BorderLayout.WEST);
 
 		JLabel title = new JLabel(name);
 		title.setForeground(ColorScheme.BRAND_ORANGE);
 		title.setFont(FontManager.getRunescapeBoldFont());
-		if (description != null && !description.isEmpty())
-		{
-			title.setToolTipText("<html>" + name + ":<br>" + description + "</html>");
-		}
+		title.setToolTipText("<html>" + name + ":<br>" + description + "</html>");
 		header.add(title, BorderLayout.CENTER);
 
-		body.setLayout(new DynamicGridLayout(0, 1, 0, 5));
+		body.setLayout(new DynamicGridLayout(0, 1, 0, ROW_GAP));
 		body.setBorder(new CompoundBorder(
 			new MatteBorder(0, 0, 1, 0, ColorScheme.MEDIUM_GRAY_COLOR),
-			new EmptyBorder(8, 0, 8, 0)));
-		body.setVisible(open);
+			new EmptyBorder(BODY_PADDING, 0, BODY_PADDING, 0)));
+		setOpen(!closedByDefault);
 
 		MouseAdapter toggleListener = new MouseAdapter()
 		{
 			@Override
 			public void mouseClicked(MouseEvent e)
 			{
-				toggle();
+				setOpen(!body.isVisible());
 			}
 		};
-		toggle.addActionListener(e -> toggle());
+		toggle.addActionListener(e -> setOpen(!body.isVisible()));
 		title.addMouseListener(toggleListener);
 		header.addMouseListener(toggleListener);
 
@@ -88,9 +90,8 @@ class CollapsibleSection extends JPanel
 		add(body);
 	}
 
-	private void toggle()
+	private void setOpen(boolean open)
 	{
-		boolean open = !body.isVisible();
 		body.setVisible(open);
 		toggle.setIcon(open ? RETRACT_ICON : EXPAND_ICON);
 		toggle.setToolTipText(open ? "Retract" : "Expand");

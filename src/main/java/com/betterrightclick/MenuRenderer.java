@@ -65,11 +65,14 @@ final class MenuRenderer
 	private final Map<Integer, BufferedImage> modIconCache = new HashMap<>();
 	private final Map<String, OptionSegments> optionCache = boundedCache();
 	private final Map<String, List<Run>> targetCache = boundedCache();
+	// Kept apart from targetCache so hiding combat levels never runs a regex per frame.
+	private final Map<String, List<Run>> strippedTargetCache = boundedCache();
 	private final RoundRectangle2D.Float menuShape = new RoundRectangle2D.Float();
 	private final RoundRectangle2D.Float scratchShape = new RoundRectangle2D.Float();
 	private final TargetColours targetColours = new TargetColours();
 
-	private Theme cachedTheme;
+	// Derived from the theme, rebuilt only when it changes.
+	private Theme theme;
 	private Font font;
 	private Font boldFont;
 	private Color bgColour;
@@ -78,6 +81,18 @@ final class MenuRenderer
 
 	private String cachedRulesRaw;
 	private Map<String, Color> cachedRules = Collections.emptyMap();
+
+	// Set by prepare() for the current call; shared by drawing and measuring.
+	private Client client;
+	private FontMetrics metrics;
+	private FontMetrics highlightMetrics;
+	private Map<String, Color> rules;
+	private boolean hideLevel;
+
+	static int headerHeight(Theme theme, BetterRightClickConfig config)
+	{
+		return theme.showHeader ? Limits.headerHeight(config) : 0;
+	}
 
 	/**
 	 * @param client null when not on the client thread; {@code <img>} tags are then skipped
@@ -90,130 +105,13 @@ final class MenuRenderer
 		Graphics2D g = (Graphics2D) graphics.create();
 		try
 		{
-			renderMenu(g, client, theme, config, rows, bounds, hoverIndex, localCombatLevel);
+			prepare(g, client, theme, config);
+			targetColours.load(config, localCombatLevel);
+			renderMenu(g, config, rows, bounds, hoverIndex);
 		}
 		finally
 		{
 			g.dispose();
-		}
-	}
-
-	private void renderMenu(Graphics2D graphics, Client client, Theme theme, BetterRightClickConfig config,
-		List<Row> rows, Rectangle bounds, int hoverIndex, int localCombatLevel)
-	{
-		updateThemeCache(theme, graphics);
-
-		int headerHeight = theme.showHeader ? Limits.headerHeight(config) : 0;
-		int textOffsetX = Limits.textOffsetX(config);
-		int baselineNudge = Limits.baselineNudge(config);
-		FontMetrics metrics = graphics.getFontMetrics(font);
-
-		drawShadow(graphics, theme, bounds);
-		Shape menuShape = menuShape(theme, bounds);
-		graphics.setColor(bgColour);
-		graphics.fill(menuShape);
-
-		Shape previousClip = graphics.getClip();
-		graphics.clip(menuShape);
-		if (theme.showHeader)
-		{
-			graphics.setColor(headerColour);
-			graphics.fillRect(bounds.x, bounds.y, bounds.width, headerHeight);
-			graphics.setFont(font);
-			drawRun(graphics, metrics, HEADER_TEXT, bounds.x + textOffsetX,
-				bounds.y + centreOffset(headerHeight, metrics, baselineNudge), theme.headerText, theme.textShadow);
-		}
-		drawRows(graphics, client, theme, config, rows, bounds, hoverIndex, localCombatLevel, metrics,
-			bounds.y + headerHeight, textOffsetX, baselineNudge);
-		graphics.setClip(previousClip);
-
-		drawBorder(graphics, theme, bounds);
-	}
-
-	private void drawRows(Graphics2D graphics, Client client, Theme theme, BetterRightClickConfig config,
-		List<Row> rows, Rectangle bounds, int hoverIndex, int localCombatLevel, FontMetrics metrics,
-		int firstRowY, int textOffsetX, int baselineNudge)
-	{
-		FontMetrics highlightMetrics = highlightMetrics(graphics, config, metrics);
-		Map<String, Color> rules = highlightRules(config);
-		boolean showHitRows = config.showHitRows();
-		int rowHeight = Limits.rowHeight(config);
-		int rowTextOffsetY = centreOffset(rowHeight, metrics, baselineNudge);
-		targetColours.load(config, localCombatLevel);
-
-		for (int rowIndex = 0; rowIndex < rows.size(); rowIndex++)
-		{
-			int rowY = firstRowY + rowIndex * rowHeight;
-			boolean hovered = rowIndex == hoverIndex;
-			if (hovered)
-			{
-				drawHover(graphics, theme, bounds.x, rowY, bounds.width, rowHeight);
-			}
-			if (showHitRows)
-			{
-				graphics.setColor(HIT_ROW_COLOUR);
-				graphics.drawRect(bounds.x, rowY, bounds.width - 1, rowHeight - 1);
-			}
-			drawRow(graphics, client, theme, rows.get(rowIndex), rules, highlightMetrics, metrics,
-				bounds.x + textOffsetX, rowY + rowTextOffsetY, bounds.x + bounds.width, hovered);
-		}
-	}
-
-	private void drawRow(Graphics2D graphics, Client client, Theme theme, Row row, Map<String, Color> rules,
-		FontMetrics highlightMetrics, FontMetrics metrics, int startX, int textY, int maxX, boolean hovered)
-	{
-		OptionSegments option = optionSegments(row.option);
-		Color highlight = rules.get(option.key);
-		FontMetrics optionMetrics = highlight != null ? highlightMetrics : metrics;
-		graphics.setFont(optionMetrics.getFont());
-
-		int cursorX = startX;
-		if (hovered && theme.hoverStyle == HoverStyle.TEXT)
-		{
-			cursorX += drawRun(graphics, optionMetrics, option.plain, cursorX, textY, theme.accent, theme.textShadow);
-		}
-		else if (highlight != null)
-		{
-			cursorX += drawRun(graphics, optionMetrics, option.plain, cursorX, textY, highlight, theme.textShadow);
-		}
-		else
-		{
-			List<Run> runs = option.runs;
-			for (int i = 0; i < runs.size(); i++)
-			{
-				Run run = runs.get(i);
-				if (cursorX >= maxX)
-				{
-					return;
-				}
-				cursorX += run.iconIndex >= 0
-					? drawIcon(graphics, optionMetrics, client, run.iconIndex, cursorX, textY)
-					: drawRun(graphics, optionMetrics, run.text, cursorX, textY,
-						run.tagColour != null ? run.tagColour : theme.text, theme.textShadow);
-			}
-		}
-
-		graphics.setFont(metrics.getFont());
-		if (row.target == null || row.target.isEmpty())
-		{
-			return;
-		}
-		cursorX += metrics.charWidth(' ');
-		List<Run> runs = targetRuns(row.target, targetColours.levelMode == CombatLevelMode.HIDE);
-		for (int i = 0; i < runs.size(); i++)
-		{
-			Run run = runs.get(i);
-			if (cursorX >= maxX)
-			{
-				return;
-			}
-			if (run.iconIndex >= 0)
-			{
-				cursorX += drawIcon(graphics, metrics, client, run.iconIndex, cursorX, textY);
-				continue;
-			}
-			cursorX += drawRun(graphics, metrics, run.text, cursorX, textY, targetColours.resolve(run, row.kind),
-				theme.textShadow);
 		}
 	}
 
@@ -223,74 +121,155 @@ final class MenuRenderer
 	 */
 	int measureWidth(Graphics2D graphics, Client client, Theme theme, BetterRightClickConfig config, List<Row> rows)
 	{
-		updateThemeCache(theme, graphics);
-		FontMetrics metrics = graphics.getFontMetrics(font);
-		FontMetrics highlightMetrics = highlightMetrics(graphics, config, metrics);
-		Map<String, Color> rules = highlightRules(config);
-		boolean hideLevel = config.combatLevelMode() == CombatLevelMode.HIDE;
-
+		prepare(graphics, client, theme, config);
 		int widest = theme.showHeader ? metrics.stringWidth(HEADER_TEXT) : 0;
-		for (Row row : rows)
+		for (int i = 0; i < rows.size(); i++)
 		{
-			OptionSegments option = optionSegments(row.option);
-			FontMetrics optionMetrics = rules.containsKey(option.key) ? highlightMetrics : metrics;
-			int width = runsWidth(client, optionMetrics, option.runs);
-			if (row.target != null && !row.target.isEmpty())
-			{
-				width += metrics.charWidth(' ') + runsWidth(client, metrics, targetRuns(row.target, hideLevel));
-			}
-			widest = Math.max(widest, width);
+			widest = Math.max(widest, layoutRow(null, rows.get(i), 0, 0, Integer.MAX_VALUE, false));
 		}
 		return widest + Limits.textOffsetX(config) * 2;
 	}
 
-	private int runsWidth(Client client, FontMetrics metrics, List<Run> runs)
+	private void prepare(Graphics2D graphics, Client client, Theme theme, BetterRightClickConfig config)
 	{
-		int width = 0;
-		for (Run run : runs)
+		if (theme != this.theme)
 		{
-			if (run.iconIndex < 0)
+			this.theme = theme;
+			font = buildFont(theme.font, theme.fontSize);
+			boldFont = buildBoldFont(theme.font, theme.fontSize);
+			int alpha = (int) Math.round(theme.opacity * MAX_ALPHA / PERCENT);
+			bgColour = ColorUtil.colorWithAlpha(theme.bg, alpha);
+			headerColour = ColorUtil.colorWithAlpha(theme.header, alpha);
+			hoverColour = ColorUtil.colorWithAlpha(theme.hover, alpha);
+		}
+		this.client = client;
+		metrics = graphics.getFontMetrics(font);
+		boolean highlights = config.highlightsEnabled();
+		highlightMetrics = highlights && config.highlightsBold() ? graphics.getFontMetrics(boldFont) : metrics;
+		rules = highlights ? rules(config.highlightRules()) : Collections.emptyMap();
+		hideLevel = config.combatLevelMode() == CombatLevelMode.HIDE;
+	}
+
+	private void renderMenu(Graphics2D graphics, BetterRightClickConfig config, List<Row> rows, Rectangle bounds,
+		int hoverIndex)
+	{
+		int headerHeight = headerHeight(theme, config);
+		int textOffsetX = Limits.textOffsetX(config);
+		int baselineNudge = Limits.baselineNudge(config);
+
+		drawShadow(graphics, bounds);
+		Shape shape = menuShape(bounds);
+		graphics.setColor(bgColour);
+		graphics.fill(shape);
+
+		Shape previousClip = graphics.getClip();
+		graphics.clip(shape);
+		if (theme.showHeader)
+		{
+			graphics.setColor(headerColour);
+			graphics.fillRect(bounds.x, bounds.y, bounds.width, headerHeight);
+			graphics.setFont(font);
+			drawRun(graphics, metrics, HEADER_TEXT, bounds.x + textOffsetX,
+				bounds.y + centreOffset(headerHeight, baselineNudge), theme.headerText);
+		}
+		drawRows(graphics, config, rows, bounds, hoverIndex, bounds.y + headerHeight, textOffsetX, baselineNudge);
+		graphics.setClip(previousClip);
+
+		drawBorder(graphics, bounds);
+	}
+
+	private void drawRows(Graphics2D graphics, BetterRightClickConfig config, List<Row> rows, Rectangle bounds,
+		int hoverIndex, int firstRowY, int textOffsetX, int baselineNudge)
+	{
+		boolean showHitRows = config.showHitRows();
+		int rowHeight = Limits.rowHeight(config);
+		int rowTextOffsetY = centreOffset(rowHeight, baselineNudge);
+
+		for (int rowIndex = 0; rowIndex < rows.size(); rowIndex++)
+		{
+			int rowY = firstRowY + rowIndex * rowHeight;
+			boolean hovered = rowIndex == hoverIndex;
+			if (hovered)
 			{
-				width += metrics.stringWidth(run.text);
+				drawHover(graphics, bounds.x, rowY, bounds.width, rowHeight);
+			}
+			if (showHitRows)
+			{
+				graphics.setColor(HIT_ROW_COLOUR);
+				graphics.drawRect(bounds.x, rowY, bounds.width - 1, rowHeight - 1);
+			}
+			layoutRow(graphics, rows.get(rowIndex), bounds.x + textOffsetX, rowY + rowTextOffsetY,
+				bounds.x + bounds.width, hovered);
+		}
+	}
+
+	/**
+	 * Draws a row's option and target, or only measures them when {@code graphics} is null.
+	 *
+	 * @return the x position just after the row's content
+	 */
+	private int layoutRow(Graphics2D graphics, Row row, int startX, int textY, int maxX, boolean hovered)
+	{
+		OptionSegments option = optionSegments(row.option);
+		Color highlight = rules.get(option.key);
+		FontMetrics optionMetrics = highlight != null ? highlightMetrics : metrics;
+		if (graphics != null)
+		{
+			graphics.setFont(optionMetrics.getFont());
+		}
+
+		int x = startX;
+		if (hovered && theme.hoverStyle == HoverStyle.TEXT)
+		{
+			x += drawRun(graphics, optionMetrics, option.plain, x, textY, theme.accent);
+		}
+		else if (highlight != null)
+		{
+			x += drawRun(graphics, optionMetrics, option.plain, x, textY, highlight);
+		}
+		else
+		{
+			List<Run> runs = option.runs;
+			for (int i = 0; i < runs.size(); i++)
+			{
+				if (x >= maxX)
+				{
+					return x;
+				}
+				Run run = runs.get(i);
+				x += run.iconIndex >= 0
+					? drawIcon(graphics, optionMetrics, run.iconIndex, x, textY)
+					: drawRun(graphics, optionMetrics, run.text, x, textY,
+						run.tagColour != null ? run.tagColour : theme.text);
+			}
+		}
+
+		if (row.target == null || row.target.isEmpty())
+		{
+			return x;
+		}
+		if (graphics != null)
+		{
+			graphics.setFont(font);
+		}
+		x += metrics.charWidth(' ');
+		List<Run> runs = targetRuns(row.target);
+		for (int i = 0; i < runs.size(); i++)
+		{
+			if (x >= maxX)
+			{
+				return x;
+			}
+			Run run = runs.get(i);
+			if (run.iconIndex >= 0)
+			{
+				x += drawIcon(graphics, metrics, run.iconIndex, x, textY);
 				continue;
 			}
-			BufferedImage icon = modIcon(client, run.iconIndex);
-			if (icon != null)
-			{
-				width += iconWidth(icon, iconHeight(metrics)) + ICON_GAP;
-			}
+			Color colour = graphics != null ? targetColours.resolve(run, row.kind) : null;
+			x += drawRun(graphics, metrics, run.text, x, textY, colour);
 		}
-		return width;
-	}
-
-	private FontMetrics highlightMetrics(Graphics2D graphics, BetterRightClickConfig config, FontMetrics metrics)
-	{
-		return config.highlightsEnabled() && config.highlightsBold() ? graphics.getFontMetrics(boldFont) : metrics;
-	}
-
-	private Map<String, Color> highlightRules(BetterRightClickConfig config)
-	{
-		return config.highlightsEnabled() ? rules(config.highlightRules()) : Collections.emptyMap();
-	}
-
-	private void updateThemeCache(Theme theme, Graphics2D graphics)
-	{
-		if (theme == cachedTheme && font != null && boldFont != null)
-		{
-			return;
-		}
-		cachedTheme = theme;
-		optionCache.clear();
-		targetCache.clear();
-
-		Font fallback = graphics.getFont();
-		font = orFallback(buildFont(theme.font, theme.fontSize), fallback);
-		boldFont = orFallback(buildBoldFont(theme.font, theme.fontSize), font);
-
-		int alpha = (int) Math.round(theme.opacity * MAX_ALPHA / PERCENT);
-		bgColour = ColorUtil.colorWithAlpha(theme.bg, alpha);
-		headerColour = ColorUtil.colorWithAlpha(theme.header, alpha);
-		hoverColour = ColorUtil.colorWithAlpha(theme.hover, alpha);
+		return x;
 	}
 
 	private Map<String, Color> rules(String raw)
@@ -303,13 +282,11 @@ final class MenuRenderer
 		{
 			cachedRulesRaw = raw;
 			cachedRules = HighlightRules.parseLookup(raw);
-			optionCache.clear();
-			targetCache.clear();
 		}
 		return cachedRules;
 	}
 
-	private Shape menuShape(Theme theme, Rectangle bounds)
+	private Shape menuShape(Rectangle bounds)
 	{
 		if (theme.radius == 0)
 		{
@@ -319,7 +296,7 @@ final class MenuRenderer
 		return menuShape;
 	}
 
-	private void drawShadow(Graphics2D graphics, Theme theme, Rectangle bounds)
+	private void drawShadow(Graphics2D graphics, Rectangle bounds)
 	{
 		if (!theme.showShadow)
 		{
@@ -333,7 +310,7 @@ final class MenuRenderer
 		}
 	}
 
-	private void drawBorder(Graphics2D graphics, Theme theme, Rectangle bounds)
+	private void drawBorder(Graphics2D graphics, Rectangle bounds)
 	{
 		if (!theme.showBorder)
 		{
@@ -351,7 +328,7 @@ final class MenuRenderer
 		}
 	}
 
-	private void drawHover(Graphics2D graphics, Theme theme, int x, int rowY, int width, int rowHeight)
+	private void drawHover(Graphics2D graphics, int x, int rowY, int width, int rowHeight)
 	{
 		switch (theme.hoverStyle)
 		{
@@ -371,7 +348,7 @@ final class MenuRenderer
 					width - 1 - OUTLINE_INSET * 2, rowHeight - 1 - OUTLINE_INSET * 2);
 				break;
 			case TEXT:
-				// drawn as an accent-coloured option in drawRow
+				// drawn as an accent-coloured option in layoutRow
 				break;
 			case NONE:
 			default:
@@ -379,52 +356,53 @@ final class MenuRenderer
 		}
 	}
 
-	private static int centreOffset(int boxHeight, FontMetrics metrics, int nudge)
+	private int centreOffset(int boxHeight, int nudge)
 	{
 		return (boxHeight - (metrics.getAscent() + metrics.getDescent())) / 2 + metrics.getAscent() + nudge;
 	}
 
-	private static int drawRun(Graphics2D graphics, FontMetrics metrics, String text, int x, int y, Color colour,
-		boolean shadow)
+	/**
+	 * @return the run's width; nothing is drawn when {@code graphics} is null
+	 */
+	private int drawRun(Graphics2D graphics, FontMetrics fontMetrics, String text, int x, int y, Color colour)
 	{
 		if (text.isEmpty())
 		{
 			return 0;
 		}
-		if (shadow)
+		if (graphics != null)
 		{
-			graphics.setColor(TEXT_SHADOW_COLOUR);
-			graphics.drawString(text, x + TEXT_SHADOW_OFFSET, y + TEXT_SHADOW_OFFSET);
+			if (theme.textShadow)
+			{
+				graphics.setColor(TEXT_SHADOW_COLOUR);
+				graphics.drawString(text, x + TEXT_SHADOW_OFFSET, y + TEXT_SHADOW_OFFSET);
+			}
+			graphics.setColor(colour);
+			graphics.drawString(text, x, y);
 		}
-		graphics.setColor(colour);
-		graphics.drawString(text, x, y);
-		return metrics.stringWidth(text);
+		return fontMetrics.stringWidth(text);
 	}
 
-	private int drawIcon(Graphics2D graphics, FontMetrics metrics, Client client, int index, int x, int y)
+	/**
+	 * @return the icon's width plus spacing; nothing is drawn when {@code graphics} is null
+	 */
+	private int drawIcon(Graphics2D graphics, FontMetrics fontMetrics, int index, int x, int y)
 	{
-		BufferedImage icon = modIcon(client, index);
+		BufferedImage icon = modIcon(index);
 		if (icon == null)
 		{
 			return 0;
 		}
-		int height = iconHeight(metrics);
-		int width = iconWidth(icon, height);
-		graphics.drawImage(icon, x, y - height, width, height, null);
+		int height = Math.max(1, fontMetrics.getAscent());
+		int width = Math.max(1, icon.getWidth() * height / icon.getHeight());
+		if (graphics != null)
+		{
+			graphics.drawImage(icon, x, y - height, width, height, null);
+		}
 		return width + ICON_GAP;
 	}
 
-	private static int iconHeight(FontMetrics metrics)
-	{
-		return Math.max(1, metrics.getAscent());
-	}
-
-	private static int iconWidth(BufferedImage icon, int height)
-	{
-		return Math.max(1, icon.getWidth() * height / icon.getHeight());
-	}
-
-	private BufferedImage modIcon(Client client, int index)
+	private BufferedImage modIcon(int index)
 	{
 		BufferedImage cached = modIconCache.get(index);
 		if (cached != null)
@@ -465,11 +443,6 @@ final class MenuRenderer
 		return image;
 	}
 
-	private static Font orFallback(Font font, Font fallback)
-	{
-		return font != null ? font : fallback;
-	}
-
 	private static Font buildFont(FontChoice choice, int size)
 	{
 		if (choice.isScalable())
@@ -506,22 +479,19 @@ final class MenuRenderer
 		return segments;
 	}
 
-	private List<Run> targetRuns(String raw, boolean hideLevel)
+	private List<Run> targetRuns(String raw)
 	{
 		String key = clean(raw);
-		if (hideLevel)
-		{
-			key = stripLevel(key);
-		}
-		List<Run> runs = targetCache.get(key);
+		Map<String, List<Run>> cache = hideLevel ? strippedTargetCache : targetCache;
+		List<Run> runs = cache.get(key);
 		if (runs == null)
 		{
 			runs = new ArrayList<>();
-			for (Run run : parseRuns(key))
+			for (Run run : parseRuns(hideLevel ? stripLevel(key) : key))
 			{
 				splitLevel(run, runs);
 			}
-			targetCache.put(key, runs);
+			cache.put(key, runs);
 		}
 		return runs;
 	}

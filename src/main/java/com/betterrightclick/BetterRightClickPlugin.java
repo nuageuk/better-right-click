@@ -20,11 +20,11 @@ import net.runelite.client.ui.overlay.OverlayManager;
 import net.runelite.client.util.ImageUtil;
 
 @PluginDescriptor(
-	name = "Better Right Click"
+	name = BetterRightClickPlugin.NAME
 )
 public class BetterRightClickPlugin extends Plugin
 {
-	private static final String NAME = "Better Right Click";
+	static final String NAME = "Better Right Click";
 	private static final String INTERFACE_STYLES_GROUP = "interfaceStyles";
 	private static final String HD_MENU_KEY = "hdMenu";
 	private static final String HD_MENU_WARNING = NAME + ": turn off Interface Styles' HD menu for best results.";
@@ -51,18 +51,18 @@ public class BetterRightClickPlugin extends Plugin
 	@Inject
 	private LocalPlayerSnapshot localPlayer;
 
-	// Created in startUp() rather than injected: RuneLite installs its look and feel after plugins
-	// load, and Swing components built before that keep the default light styling.
-	private BetterRightClickPanel panel;
 	private NavigationButton navigationButton;
-	private boolean warnedAboutHdMenu;
+	// Only touched on the client thread, apart from the reset in shutDown.
+	private volatile boolean warnedAboutHdMenu;
 
 	@Override
 	protected void startUp()
 	{
 		// Build the panel first: it is the step that can throw, and the overlay (which consumes the
-		// vanilla menu) shouldn't be left registered if startUp fails part-way.
-		panel = getInjector().getInstance(BetterRightClickPanel.class);
+		// vanilla menu) shouldn't be left registered if startUp fails part-way. It's created here rather
+		// than injected because RuneLite installs its look and feel after plugins load, and Swing
+		// components built before that keep the default light styling.
+		BetterRightClickPanel panel = getInjector().getInstance(BetterRightClickPanel.class);
 		navigationButton = NavigationButton.builder()
 			.tooltip(NAME)
 			.icon(ImageUtil.loadImageResource(BetterRightClickPlugin.class, "panel_icon.png"))
@@ -87,9 +87,7 @@ public class BetterRightClickPlugin extends Plugin
 			clientToolbar.removeNavigation(navigationButton);
 			navigationButton = null;
 		}
-		panel = null;
 		warnedAboutHdMenu = false;
-		menuOverlay.resetFailure();
 		localPlayer.clear();
 	}
 
@@ -155,11 +153,17 @@ public class BetterRightClickPlugin extends Plugin
 	// Called from startUp and ConfigChanged, neither of which is guaranteed to be on the client thread.
 	private void warnIfHdMenuEnabled(String hdMenuValue)
 	{
-		if (!warnedAboutHdMenu && Boolean.parseBoolean(hdMenuValue))
+		if (!Boolean.parseBoolean(hdMenuValue))
 		{
-			warnedAboutHdMenu = true;
-			clientThread.invokeLater(() ->
-				client.addChatMessage(ChatMessageType.GAMEMESSAGE, "", HD_MENU_WARNING, null));
+			return;
 		}
+		clientThread.invokeLater(() ->
+		{
+			if (!warnedAboutHdMenu)
+			{
+				warnedAboutHdMenu = true;
+				client.addChatMessage(ChatMessageType.GAMEMESSAGE, "", HD_MENU_WARNING, null);
+			}
+		});
 	}
 }

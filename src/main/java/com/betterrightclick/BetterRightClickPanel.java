@@ -39,8 +39,6 @@ import javax.swing.JTextField;
 import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
-import javax.swing.event.PopupMenuEvent;
-import javax.swing.event.PopupMenuListener;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.ui.DynamicGridLayout;
 import net.runelite.client.ui.FontManager;
@@ -132,7 +130,8 @@ class BetterRightClickPanel extends PluginPanel
 			@Override
 			public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus)
 			{
-				String text = value == null ? "" : themeLabel((Theme) value);
+				Theme theme = (Theme) value;
+				String text = theme == null ? "" : theme.builtIn ? "🔒 " + theme.name : theme.name;
 				return super.getListCellRendererComponent(list, text, index, isSelected, cellHasFocus);
 			}
 		});
@@ -199,15 +198,6 @@ class BetterRightClickPanel extends PluginPanel
 
 	private JButton buildMoreButton()
 	{
-		moreButton.setToolTipText("More theme actions");
-		JPopupMenu menu = buildMoreMenu();
-		moreButton.addActionListener(e -> menu.show(moreButton, 0, moreButton.getHeight()));
-		copiedFlash.setRepeats(false);
-		return moreButton;
-	}
-
-	private JPopupMenu buildMoreMenu()
-	{
 		JPopupMenu menu = new JPopupMenu();
 		JMenuItem renameItem = new JMenuItem("Rename");
 		renameItem.addActionListener(e -> promptRename());
@@ -238,32 +228,16 @@ class BetterRightClickPanel extends PluginPanel
 		menu.add(exportItem);
 		menu.add(importItem);
 
-		menu.addPopupMenuListener(new PopupMenuListener()
+		moreButton.setToolTipText("More theme actions");
+		moreButton.addActionListener(e ->
 		{
-			@Override
-			public void popupMenuWillBecomeVisible(PopupMenuEvent e)
-			{
-				boolean userTheme = !themeManager.active().builtIn;
-				renameItem.setEnabled(userTheme);
-				deleteItem.setEnabled(userTheme);
-			}
-
-			@Override
-			public void popupMenuWillBecomeInvisible(PopupMenuEvent e)
-			{
-			}
-
-			@Override
-			public void popupMenuCanceled(PopupMenuEvent e)
-			{
-			}
+			boolean userTheme = !themeManager.active().builtIn;
+			renameItem.setEnabled(userTheme);
+			deleteItem.setEnabled(userTheme);
+			menu.show(moreButton, 0, moreButton.getHeight());
 		});
-		return menu;
-	}
-
-	private static String themeLabel(Theme theme)
-	{
-		return theme.builtIn ? "🔒 " + theme.name : theme.name;
+		copiedFlash.setRepeats(false);
+		return moreButton;
 	}
 
 	// --- Theme-bound sections ---
@@ -381,9 +355,14 @@ class BetterRightClickPanel extends PluginPanel
 	{
 		themeManager.setWorking(mutator.apply(themeManager.effectiveTheme()));
 		preview.refresh();
-		themeCombo.repaint();
-		saveButton.setEnabled(!themeManager.active().builtIn && themeManager.isEdited());
-		revertButton.setEnabled(themeManager.isEdited());
+		updateEditButtons();
+	}
+
+	private void updateEditButtons()
+	{
+		boolean edited = themeManager.isEdited();
+		saveButton.setEnabled(edited && !themeManager.active().builtIn);
+		revertButton.setEnabled(edited);
 	}
 
 	// --- Global sections ---
@@ -392,15 +371,8 @@ class BetterRightClickPanel extends PluginPanel
 	{
 		CollapsibleSection section = new CollapsibleSection("Action highlights", "Highlight specific menu options", false);
 
-		JCheckBox enabled = new JCheckBox();
-		enabled.setSelected(config.highlightsEnabled());
-		enabled.addActionListener(e -> setGlobal(BetterRightClickConfig.KEY_HIGHLIGHTS_ENABLED, enabled.isSelected()));
-		section.addRow(row("Enabled", enabled));
-
-		JCheckBox bold = new JCheckBox();
-		bold.setSelected(config.highlightsBold());
-		bold.addActionListener(e -> setGlobal(BetterRightClickConfig.KEY_HIGHLIGHTS_BOLD, bold.isSelected()));
-		section.addRow(row("Bold", bold));
+		section.addRow(row("Enabled", globalCheckBox(config.highlightsEnabled(), BetterRightClickConfig.KEY_HIGHLIGHTS_ENABLED)));
+		section.addRow(row("Bold", globalCheckBox(config.highlightsBold(), BetterRightClickConfig.KEY_HIGHLIGHTS_BOLD)));
 
 		rulesPanel.setLayout(new DynamicGridLayout(0, 1, 0, ROW_GAP));
 		for (HighlightRules.Rule parsed : HighlightRules.parse(config.highlightRules()))
@@ -422,33 +394,14 @@ class BetterRightClickPanel extends PluginPanel
 	{
 		CollapsibleSection section = new CollapsibleSection("Targets", "Colour menu targets by entity type", false);
 
-		JComboBox<TargetMode> modeCombo = new JComboBox<>(TargetMode.values());
-		modeCombo.setRenderer(new TitleCaseListCellRenderer());
-		modeCombo.setSelectedItem(config.targetMode());
-
 		ColorJButton npc = globalColourButton(config.npcColour(), "NPC colour", BetterRightClickConfig.KEY_NPC_COLOUR);
 		ColorJButton player = globalColourButton(config.playerColour(), "Player colour", BetterRightClickConfig.KEY_PLAYER_COLOUR);
 		ColorJButton item = globalColourButton(config.itemColour(), "Item colour", BetterRightClickConfig.KEY_ITEM_COLOUR);
 		ColorJButton object = globalColourButton(config.objectColour(), "Object colour", BetterRightClickConfig.KEY_OBJECT_COLOUR);
 		ColorJButton other = globalColourButton(config.otherColour(), "Other colour", BetterRightClickConfig.KEY_OTHER_COLOUR);
 
-		Runnable updateEnabled = () ->
-		{
-			boolean custom = modeCombo.getSelectedItem() == TargetMode.CUSTOM;
-			npc.setEnabled(custom);
-			player.setEnabled(custom);
-			item.setEnabled(custom);
-			object.setEnabled(custom);
-			other.setEnabled(custom);
-		};
-		updateEnabled.run();
-		modeCombo.addActionListener(e ->
-		{
-			setGlobal(BetterRightClickConfig.KEY_TARGET_MODE, modeCombo.getSelectedItem());
-			updateEnabled.run();
-		});
-
-		section.addRow(row("Mode", modeCombo));
+		section.addRow(row("Mode", modeCombo(TargetMode.values(), config.targetMode(), TargetMode.CUSTOM,
+			BetterRightClickConfig.KEY_TARGET_MODE, npc, player, item, object, other)));
 		section.addRow(row("NPC", npc));
 		section.addRow(row("Player", player));
 		section.addRow(row("Item", item));
@@ -461,29 +414,12 @@ class BetterRightClickPanel extends PluginPanel
 	{
 		CollapsibleSection section = new CollapsibleSection("Combat levels", "Colour the combat level shown in targets", false);
 
-		JComboBox<CombatLevelMode> modeCombo = new JComboBox<>(CombatLevelMode.values());
-		modeCombo.setRenderer(new TitleCaseListCellRenderer());
-		modeCombo.setSelectedItem(config.combatLevelMode());
-
 		ColorJButton lower = globalColourButton(config.lowerLevelColour(), "Lower level colour", BetterRightClickConfig.KEY_LOWER_LEVEL_COLOUR);
 		ColorJButton same = globalColourButton(config.sameLevelColour(), "Same level colour", BetterRightClickConfig.KEY_SAME_LEVEL_COLOUR);
 		ColorJButton higher = globalColourButton(config.higherLevelColour(), "Higher level colour", BetterRightClickConfig.KEY_HIGHER_LEVEL_COLOUR);
 
-		Runnable updateEnabled = () ->
-		{
-			boolean custom = modeCombo.getSelectedItem() == CombatLevelMode.CUSTOM;
-			lower.setEnabled(custom);
-			same.setEnabled(custom);
-			higher.setEnabled(custom);
-		};
-		updateEnabled.run();
-		modeCombo.addActionListener(e ->
-		{
-			setGlobal(BetterRightClickConfig.KEY_COMBAT_LEVEL_MODE, modeCombo.getSelectedItem());
-			updateEnabled.run();
-		});
-
-		section.addRow(row("Mode", modeCombo));
+		section.addRow(row("Mode", modeCombo(CombatLevelMode.values(), config.combatLevelMode(), CombatLevelMode.CUSTOM,
+			BetterRightClickConfig.KEY_COMBAT_LEVEL_MODE, lower, same, higher)));
 		section.addRow(row("Lower level", lower));
 		section.addRow(row("Same level", same));
 		section.addRow(row("Higher level", higher));
@@ -503,10 +439,7 @@ class BetterRightClickPanel extends PluginPanel
 		section.addRow(row("Baseline nudge", globalIntSpinner(Limits.baselineNudge(config),
 			Limits.MIN_BASELINE_NUDGE, Limits.MAX_BASELINE_NUDGE, BetterRightClickConfig.KEY_BASELINE_NUDGE)));
 
-		JCheckBox hitRows = new JCheckBox();
-		hitRows.setSelected(config.showHitRows());
-		hitRows.addActionListener(e -> setGlobal(BetterRightClickConfig.KEY_SHOW_HIT_ROWS, hitRows.isSelected()));
-		section.addRow(row("Show hit rows", hitRows));
+		section.addRow(row("Show hit rows", globalCheckBox(config.showHitRows(), BetterRightClickConfig.KEY_SHOW_HIT_ROWS)));
 
 		return section;
 	}
@@ -523,6 +456,40 @@ class BetterRightClickPanel extends PluginPanel
 	private ColorJButton globalColourButton(Color initial, String title, String key)
 	{
 		return colourButton(initial, title, NOTHING, c -> setGlobal(key, c));
+	}
+
+	private JCheckBox globalCheckBox(boolean selected, String key)
+	{
+		JCheckBox checkbox = new JCheckBox();
+		checkbox.setSelected(selected);
+		checkbox.addActionListener(e -> setGlobal(key, checkbox.isSelected()));
+		return checkbox;
+	}
+
+	/**
+	 * A global mode combo whose colour buttons are only enabled in the mode that uses them.
+	 */
+	private <E extends Enum<E>> JComboBox<E> modeCombo(E[] modes, E selected, E customMode, String key,
+		ColorJButton... colourButtons)
+	{
+		JComboBox<E> combo = new JComboBox<>(modes);
+		combo.setRenderer(new TitleCaseListCellRenderer());
+		combo.setSelectedItem(selected);
+		Runnable updateEnabled = () ->
+		{
+			boolean custom = combo.getSelectedItem() == customMode;
+			for (ColorJButton button : colourButtons)
+			{
+				button.setEnabled(custom);
+			}
+		};
+		updateEnabled.run();
+		combo.addActionListener(e ->
+		{
+			setGlobal(key, combo.getSelectedItem());
+			updateEnabled.run();
+		});
+		return combo;
 	}
 
 	private JSpinner globalIntSpinner(int value, int min, int max, String key)
@@ -745,11 +712,8 @@ class BetterRightClickPanel extends PluginPanel
 				r.run();
 			}
 
-			saveButton.setEnabled(!themeManager.active().builtIn && themeManager.isEdited());
-			revertButton.setEnabled(themeManager.isEdited());
-
+			updateEditButtons();
 			preview.refresh();
-			themeCombo.repaint();
 		}
 		finally
 		{

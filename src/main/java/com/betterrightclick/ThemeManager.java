@@ -88,7 +88,7 @@ class ThemeManager
 		return !working.sameStyle(active());
 	}
 
-	boolean isFull()
+	private boolean isFull()
 	{
 		return userThemes.size() >= Limits.MAX_USER_THEMES;
 	}
