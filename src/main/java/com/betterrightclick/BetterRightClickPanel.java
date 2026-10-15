@@ -3,6 +3,7 @@ package com.betterrightclick;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.Dimension;
 import java.awt.GridLayout;
 import java.awt.Insets;
 import java.awt.Toolkit;
@@ -10,6 +11,8 @@ import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.StringSelection;
 import java.awt.datatransfer.UnsupportedFlavorException;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
 import java.awt.event.MouseAdapter;
@@ -39,6 +42,8 @@ import javax.swing.JTextField;
 import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
+import javax.swing.plaf.basic.BasicHTML;
+import javax.swing.text.View;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.DynamicGridLayout;
@@ -70,8 +75,8 @@ class BetterRightClickPanel extends PluginPanel
 	private static final String HD_MENU_WARNING = "Interface Styles 'High detail menu' is on and will conflict with "
 		+ "Better Right Click. Turn it off for themes to work.";
 	private static final int WARNING_PADDING = 6;
-	// A fixed text width lets the wrapped HTML label report its real height to the layout.
-	private static final int WARNING_TEXT_WIDTH = PANEL_WIDTH - BORDER_OFFSET * 2 - WARNING_PADDING * 2;
+	// Before the first layout there is no width yet, so assume the sidebar's usual content width.
+	private static final int WARNING_FALLBACK_WIDTH = PANEL_WIDTH - BORDER_OFFSET * 2;
 	private static final Consumer<Color> NOTHING = c ->
 	{
 	};
@@ -151,14 +156,49 @@ class BetterRightClickPanel extends PluginPanel
 
 	private static JLabel buildHdMenuWarning()
 	{
-		JLabel label = new JLabel("<html><body style='width:" + WARNING_TEXT_WIDTH + "px'>" + HD_MENU_WARNING
-			+ "</body></html>");
+		JLabel label = new WrappingLabel("<html>" + HD_MENU_WARNING + "</html>");
 		label.setFont(FontManager.getRunescapeSmallFont());
 		label.setForeground(Color.BLACK);
 		label.setBackground(ColorScheme.PROGRESS_INPROGRESS_COLOR);
 		label.setOpaque(true);
 		label.setBorder(BorderFactory.createEmptyBorder(WARNING_PADDING, WARNING_PADDING, WARNING_PADDING, WARNING_PADDING));
 		return label;
+	}
+
+	/**
+	 * An HTML label that wraps to the width the layout gives it and reports the matching height.
+	 * A plain HTML label asks for one long line, so the layout clips the wrapped text.
+	 */
+	private static final class WrappingLabel extends JLabel
+	{
+		private WrappingLabel(String html)
+		{
+			super(html);
+			// The height depends on the width, which is only known after layout, so lay out again.
+			addComponentListener(new ComponentAdapter()
+			{
+				@Override
+				public void componentResized(ComponentEvent e)
+				{
+					revalidate();
+				}
+			});
+		}
+
+		@Override
+		public Dimension getPreferredSize()
+		{
+			View view = (View) getClientProperty(BasicHTML.propertyKey);
+			if (view == null)
+			{
+				return super.getPreferredSize();
+			}
+			Insets insets = getInsets();
+			int width = getWidth() > 0 ? getWidth() : WARNING_FALLBACK_WIDTH;
+			view.setSize(width - insets.left - insets.right, 0);
+			int height = (int) Math.ceil(view.getPreferredSpan(View.Y_AXIS));
+			return new Dimension(width, height + insets.top + insets.bottom);
+		}
 	}
 
 	// --- Theme row: combo + save/revert/more ---

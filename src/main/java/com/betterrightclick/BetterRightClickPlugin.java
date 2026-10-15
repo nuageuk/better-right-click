@@ -12,6 +12,7 @@ import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
+import net.runelite.client.config.RuneLiteConfig;
 import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.plugins.Plugin;
@@ -29,6 +30,9 @@ public class BetterRightClickPlugin extends Plugin
 	static final String NAME = "Better Right Click";
 	private static final String INTERFACE_STYLES_GROUP = "interfaceStyles";
 	private static final String HD_MENU_KEY = "hdMenu";
+	// PluginManager stores each plugin's enabled state under its lowercased class name in the
+	// "runelite" group. Interface Styles is off by default, as is its hdMenu option.
+	private static final String INTERFACE_STYLES_PLUGIN_KEY = "interfacestylesplugin";
 	private static final String HD_MENU_WARNING = NAME + ": turn off Interface Styles' HD menu for best results.";
 	private static final int NAV_PRIORITY = 5;
 
@@ -58,7 +62,8 @@ public class BetterRightClickPlugin extends Plugin
 	// ConfigChanged can arrive on any thread.
 	private volatile BetterRightClickPanel panel;
 	private NavigationButton navigationButton;
-	// Only touched on the client thread, apart from the reset in shutDown.
+	// Once per session, and only once it could actually be seen. Client thread only, apart from the
+	// reset in shutDown.
 	private volatile boolean warnedAboutHdMenu;
 
 	@Override
@@ -78,7 +83,7 @@ public class BetterRightClickPlugin extends Plugin
 		menuOverlay.resetFailure();
 		overlayManager.add(menuOverlay);
 
-		onHdMenuSetting(configManager.getConfiguration(INTERFACE_STYLES_GROUP, HD_MENU_KEY));
+		updateHdMenuWarning();
 	}
 
 	@Override
@@ -124,14 +129,19 @@ public class BetterRightClickPlugin extends Plugin
 		{
 			localPlayer.clear();
 		}
+		else if (event.getGameState() == GameState.LOGGED_IN)
+		{
+			warnInChatOnce();
+		}
 	}
 
 	@Subscribe
 	public void onConfigChanged(ConfigChanged event)
 	{
-		if (INTERFACE_STYLES_GROUP.equals(event.getGroup()) && HD_MENU_KEY.equals(event.getKey()))
+		if ((INTERFACE_STYLES_GROUP.equals(event.getGroup()) && HD_MENU_KEY.equals(event.getKey()))
+			|| (RuneLiteConfig.GROUP_NAME.equals(event.getGroup()) && INTERFACE_STYLES_PLUGIN_KEY.equals(event.getKey())))
 		{
-			onHdMenuSetting(event.getNewValue());
+			updateHdMenuWarning();
 		}
 	}
 
@@ -141,27 +151,39 @@ public class BetterRightClickPlugin extends Plugin
 		return configManager.getConfig(BetterRightClickConfig.class);
 	}
 
+	/**
+	 * The HD menu only conflicts while the Interface Styles plugin is enabled and its option is on.
+	 */
+	private boolean isHdMenuActive()
+	{
+		return Boolean.parseBoolean(configManager.getConfiguration(RuneLiteConfig.GROUP_NAME, INTERFACE_STYLES_PLUGIN_KEY))
+			&& Boolean.parseBoolean(configManager.getConfiguration(INTERFACE_STYLES_GROUP, HD_MENU_KEY));
+	}
+
 	// Called from startUp and ConfigChanged, neither of which is guaranteed to be on the EDT or the
 	// client thread.
-	private void onHdMenuSetting(String hdMenuValue)
+	private void updateHdMenuWarning()
 	{
-		boolean enabled = Boolean.parseBoolean(hdMenuValue);
+		boolean active = isHdMenuActive();
 		BetterRightClickPanel current = panel;
 		if (current != null)
 		{
-			SwingUtilities.invokeLater(() -> current.setHdMenuWarningVisible(enabled));
+			SwingUtilities.invokeLater(() -> current.setHdMenuWarningVisible(active));
 		}
-		if (!enabled)
+		if (active)
+		{
+			clientThread.invokeLater(this::warnInChatOnce);
+		}
+	}
+
+	// Client thread only. Skipped until logged in, so the one warning isn't spent where nobody sees it.
+	private void warnInChatOnce()
+	{
+		if (warnedAboutHdMenu || client.getGameState() != GameState.LOGGED_IN || !isHdMenuActive())
 		{
 			return;
 		}
-		clientThread.invokeLater(() ->
-		{
-			if (!warnedAboutHdMenu)
-			{
-				warnedAboutHdMenu = true;
-				client.addChatMessage(ChatMessageType.GAMEMESSAGE, "", HD_MENU_WARNING, null);
-			}
-		});
+		warnedAboutHdMenu = true;
+		client.addChatMessage(ChatMessageType.GAMEMESSAGE, "", HD_MENU_WARNING, null);
 	}
 }
