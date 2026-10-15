@@ -139,11 +139,25 @@ class BetterRightClickPanel extends PluginPanel
 				return;
 			}
 			Theme selected = (Theme) themeCombo.getSelectedItem();
-			if (selected != null && !selected.id.equals(themeManager.activeId()))
+			if (selected == null || selected.id.equals(themeManager.activeId()))
 			{
-				themeManager.applyTheme(selected.id);
-				refresh();
+				return;
 			}
+			if (!confirmDiscardEdits())
+			{
+				refreshing = true;
+				try
+				{
+					selectActiveTheme();
+				}
+				finally
+				{
+					refreshing = false;
+				}
+				return;
+			}
+			themeManager.applyTheme(selected.id);
+			refresh();
 		});
 		container.add(themeCombo);
 
@@ -719,22 +733,14 @@ class BetterRightClickPanel extends PluginPanel
 				themeCombo.addItem(theme);
 			}
 
-			Theme active = themeManager.active();
-			for (int i = 0; i < themeCombo.getItemCount(); i++)
-			{
-				if (themeCombo.getItemAt(i).id.equals(active.id))
-				{
-					themeCombo.setSelectedIndex(i);
-					break;
-				}
-			}
+			selectActiveTheme();
 
 			for (Runnable r : themeControlRefreshers)
 			{
 				r.run();
 			}
 
-			saveButton.setEnabled(!active.builtIn && themeManager.isEdited());
+			saveButton.setEnabled(!themeManager.active().builtIn && themeManager.isEdited());
 			revertButton.setEnabled(themeManager.isEdited());
 
 			preview.refresh();
@@ -744,6 +750,36 @@ class BetterRightClickPanel extends PluginPanel
 		{
 			refreshing = false;
 		}
+	}
+
+	// Callers must hold the refreshing guard so the combo's listener ignores this change.
+	private void selectActiveTheme()
+	{
+		String activeId = themeManager.activeId();
+		for (int i = 0; i < themeCombo.getItemCount(); i++)
+		{
+			if (themeCombo.getItemAt(i).id.equals(activeId))
+			{
+				themeCombo.setSelectedIndex(i);
+				return;
+			}
+		}
+	}
+
+	/**
+	 * @return true if there are no unsaved edits, or the user chose to discard them
+	 */
+	private boolean confirmDiscardEdits()
+	{
+		if (!themeManager.isEdited())
+		{
+			return true;
+		}
+		Object[] options = {"Discard", "Cancel"};
+		int result = JOptionPane.showOptionDialog(this,
+			"Discard unsaved changes to " + themeManager.active().name + "?", "Unsaved changes",
+			JOptionPane.DEFAULT_OPTION, JOptionPane.WARNING_MESSAGE, null, options, options[1]);
+		return result == 0;
 	}
 
 	private void promptSaveAsNew()
@@ -810,7 +846,7 @@ class BetterRightClickPanel extends PluginPanel
 
 		String payload = (String) JOptionPane.showInputDialog(this, "Paste exported theme:", "Import theme",
 			JOptionPane.PLAIN_MESSAGE, null, null, clipboardText);
-		if (payload == null || payload.trim().isEmpty())
+		if (payload == null || payload.trim().isEmpty() || !confirmDiscardEdits())
 		{
 			return;
 		}
