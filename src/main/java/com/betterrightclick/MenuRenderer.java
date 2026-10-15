@@ -218,9 +218,8 @@ final class MenuRenderer
 	}
 
 	/**
-	 * Width of the widest row (and the header) plus horizontal padding, measured with combat levels
-	 * stripped. Used instead of the game's menu width when levels are hidden, since the game sizes
-	 * the menu from the full targets.
+	 * Width of the widest row (and the header) plus horizontal padding, measured the way the rows are
+	 * drawn. Used instead of the game's menu width, which adds its own padding and counts hidden levels.
 	 */
 	int measureWidth(Graphics2D graphics, Client client, Theme theme, BetterRightClickConfig config, List<Row> rows)
 	{
@@ -228,6 +227,7 @@ final class MenuRenderer
 		FontMetrics metrics = graphics.getFontMetrics(font);
 		FontMetrics highlightMetrics = highlightMetrics(graphics, config, metrics);
 		Map<String, Color> rules = highlightRules(config);
+		boolean hideLevel = config.combatLevelMode() == CombatLevelMode.HIDE;
 
 		int widest = theme.showHeader ? metrics.stringWidth(HEADER_TEXT) : 0;
 		for (Row row : rows)
@@ -237,7 +237,7 @@ final class MenuRenderer
 			int width = runsWidth(client, optionMetrics, option.runs);
 			if (row.target != null && !row.target.isEmpty())
 			{
-				width += metrics.charWidth(' ') + runsWidth(client, metrics, targetRuns(row.target, true));
+				width += metrics.charWidth(' ') + runsWidth(client, metrics, targetRuns(row.target, hideLevel));
 			}
 			widest = Math.max(widest, width);
 		}

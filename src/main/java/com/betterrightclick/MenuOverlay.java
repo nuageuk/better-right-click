@@ -107,11 +107,8 @@ class MenuOverlay extends Overlay
 		Theme theme = themeManager.effectiveTheme();
 
 		fillRows(menu.getMenuEntries());
-		if (config.combatLevelMode() == CombatLevelMode.HIDE)
-		{
-			// The game's width counts the hidden levels; X, Y and row heights still come from the game.
-			bounds.width = Math.min(bounds.width, renderer.measureWidth(graphics, client, theme, config, rows));
-		}
+		// Fit the box to what we draw, never past the game's click area; X, Y and row heights stay the game's.
+		bounds.width = Math.min(bounds.width, renderer.measureWidth(graphics, client, theme, config, rows));
 
 		int headerHeight = theme.showHeader ? Limits.headerHeight(config) : 0;
 		int hoverIndex = hoverIndex(client.getMouseCanvasPosition(), headerHeight, Limits.rowHeight(config));
