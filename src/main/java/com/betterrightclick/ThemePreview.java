@@ -75,10 +75,13 @@ class ThemePreview extends JPanel
 		repaint();
 	}
 
+	// DynamicGridLayout scales each child's preferred width to fill the column, so a width of 0 (as
+	// getWidth() is before the first layout) would stay 0. Any non-zero width gets stretched to fit.
 	@Override
 	public Dimension getPreferredSize()
 	{
-		return new Dimension(getWidth(), rowsTop(themeManager.effectiveTheme()) + rowsHeight() + TOP_MARGIN);
+		return new Dimension(MIN_MENU_WIDTH + SIDE_MARGIN * 2,
+			rowsTop(themeManager.effectiveTheme()) + rowsHeight() + TOP_MARGIN);
 	}
 
 	@Override
