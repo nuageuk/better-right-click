@@ -30,10 +30,12 @@ public class BetterRightClickPlugin extends Plugin
 	static final String NAME = "Better Right Click";
 	private static final String INTERFACE_STYLES_GROUP = "interfaceStyles";
 	private static final String HD_MENU_KEY = "hdMenu";
+	private static final String MENU_ALPHA_KEY = "menuAlpha";
 	// PluginManager stores each plugin's enabled state under its lowercased class name in the
-	// "runelite" group. Interface Styles is off by default, as is its hdMenu option.
+	// "runelite" group. Interface Styles is off by default.
 	private static final String INTERFACE_STYLES_PLUGIN_KEY = "interfacestylesplugin";
-	private static final String HD_MENU_WARNING = NAME + ": turn off Interface Styles' HD menu for best results.";
+	private static final String INTERFACE_STYLES_WARNING = NAME
+		+ ": turn off Interface Styles' High detail menu and set its Menu alpha to 255.";
 	private static final int NAV_PRIORITY = 5;
 
 	@Inject
@@ -68,7 +70,7 @@ public class BetterRightClickPlugin extends Plugin
 	private volatile NavigationButton navigationButton;
 	// Once per session, and only once it could actually be seen. Client thread only, apart from the
 	// reset in shutDown.
-	private volatile boolean warnedAboutHdMenu;
+	private volatile boolean warnedAboutInterfaceStylesConflict;
 
 	@Override
 	protected void startUp()
@@ -87,7 +89,7 @@ public class BetterRightClickPlugin extends Plugin
 		menuOverlay.resetFailure();
 		overlayManager.add(menuOverlay);
 
-		updateHdMenuWarning();
+		updateInterfaceStylesWarning();
 	}
 
 	@Override
@@ -100,7 +102,7 @@ public class BetterRightClickPlugin extends Plugin
 			navigationButton = null;
 		}
 		panel = null;
-		warnedAboutHdMenu = false;
+		warnedAboutInterfaceStylesConflict = false;
 		localPlayer.setOnChange(null);
 		localPlayer.clear();
 	}
@@ -148,10 +150,11 @@ public class BetterRightClickPlugin extends Plugin
 			updateSidebarButton();
 			return;
 		}
-		if ((INTERFACE_STYLES_GROUP.equals(event.getGroup()) && HD_MENU_KEY.equals(event.getKey()))
+		if ((INTERFACE_STYLES_GROUP.equals(event.getGroup())
+			&& (HD_MENU_KEY.equals(event.getKey()) || MENU_ALPHA_KEY.equals(event.getKey())))
 			|| (RuneLiteConfig.GROUP_NAME.equals(event.getGroup()) && INTERFACE_STYLES_PLUGIN_KEY.equals(event.getKey())))
 		{
-			updateHdMenuWarning();
+			updateInterfaceStylesWarning();
 		}
 	}
 
@@ -180,23 +183,31 @@ public class BetterRightClickPlugin extends Plugin
 	}
 
 	/**
-	 * The HD menu only conflicts while the Interface Styles plugin is enabled and its option is on.
+	 * Interface Styles conflicts while enabled with its high-detail menu on or its menu alpha not 255.
 	 */
-	private boolean isHdMenuActive()
+	private boolean isInterfaceStylesConflictActive()
 	{
-		return Boolean.parseBoolean(configManager.getConfiguration(RuneLiteConfig.GROUP_NAME, INTERFACE_STYLES_PLUGIN_KEY))
-			&& Boolean.parseBoolean(configManager.getConfiguration(INTERFACE_STYLES_GROUP, HD_MENU_KEY));
+		if (!Boolean.parseBoolean(configManager.getConfiguration(RuneLiteConfig.GROUP_NAME, INTERFACE_STYLES_PLUGIN_KEY)))
+		{
+			return false;
+		}
+		if (Boolean.parseBoolean(configManager.getConfiguration(INTERFACE_STYLES_GROUP, HD_MENU_KEY)))
+		{
+			return true;
+		}
+		Integer menuAlpha = configManager.getConfiguration(INTERFACE_STYLES_GROUP, MENU_ALPHA_KEY, Integer.class);
+		return menuAlpha != null && menuAlpha != 255;
 	}
 
 	// Called from startUp and ConfigChanged, neither of which is guaranteed to be on the EDT or the
 	// client thread.
-	private void updateHdMenuWarning()
+	private void updateInterfaceStylesWarning()
 	{
-		boolean active = isHdMenuActive();
+		boolean active = isInterfaceStylesConflictActive();
 		BetterRightClickPanel current = panel;
 		if (current != null)
 		{
-			SwingUtilities.invokeLater(() -> current.setHdMenuWarningVisible(active));
+			SwingUtilities.invokeLater(() -> current.setInterfaceStylesWarningVisible(active));
 		}
 		if (active)
 		{
@@ -207,11 +218,12 @@ public class BetterRightClickPlugin extends Plugin
 	// Client thread only. Skipped until logged in, so the one warning isn't spent where nobody sees it.
 	private void warnInChatOnce()
 	{
-		if (warnedAboutHdMenu || client.getGameState() != GameState.LOGGED_IN || !isHdMenuActive())
+		if (warnedAboutInterfaceStylesConflict || client.getGameState() != GameState.LOGGED_IN
+			|| !isInterfaceStylesConflictActive())
 		{
 			return;
 		}
-		warnedAboutHdMenu = true;
-		client.addChatMessage(ChatMessageType.GAMEMESSAGE, "", HD_MENU_WARNING, null);
+		warnedAboutInterfaceStylesConflict = true;
+		client.addChatMessage(ChatMessageType.GAMEMESSAGE, "", INTERFACE_STYLES_WARNING, null);
 	}
 }

@@ -28,7 +28,7 @@ Everything is set from the Better Right Click panel in the RuneLite sidebar, wit
 
 ## Setup
 
-Turn off "High detail menu" in Interface Styles, as it conflicts with this plugin.
+In Interface Styles, turn off "High detail menu" and set "Menu alpha" to 255, or turn off Interface Styles, to avoid conflicts with this plugin.
 
 ## Settings guide
 

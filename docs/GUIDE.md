@@ -120,7 +120,7 @@ You won't normally need these.
 
 ## Things to know
 
-- **Interface Styles' "High detail menu" conflicts with this plugin.** While the Interface Styles plugin is on with that option enabled, the panel shows a warning at the top, and you get a chat message once after logging in. Turn off "High detail menu" (or the Interface Styles plugin) for themes to work.
+- **Interface Styles' "High detail menu" and "Menu alpha" settings can conflict with this plugin.** While Interface Styles is on with High detail menu enabled or Menu alpha set below 255, the panel shows a warning at the top, and you get a chat message once after logging in. Turn off High detail menu and set Menu alpha to 255, or turn off Interface Styles, for themes to work.
 - You can hide the sidebar button with **Show sidebar button** in the plugin's settings in the RuneLite configuration panel. Turn it back on to get the panel back.
 - The plugin only changes how the menu looks. The game still decides what is in the menu and what each click does.
 - The menu is never wider than the game's own menu, so clicks always land where you expect.

@@ -75,8 +75,8 @@ class BetterRightClickPanel extends PluginPanel
 	private static final String MORE_LABEL = "More ▾";
 	private static final String COPIED_LABEL = "Copied!";
 	private static final int COPIED_FLASH_MS = 1500;
-	private static final String HD_MENU_WARNING = "Interface Styles 'High detail menu' is on and will conflict with "
-		+ "Better Right Click. Turn it off for themes to work.";
+	private static final String INTERFACE_STYLES_WARNING = "Interface Styles' 'High detail menu' or 'Menu alpha' setting "
+		+ "conflicts with Better Right Click. Turn off High detail menu and set Menu alpha to 255, or turn off Interface Styles.";
 	private static final int WARNING_PADDING = 6;
 	// Before the first layout there is no width yet, so assume the sidebar's usual content width.
 	private static final int WARNING_FALLBACK_WIDTH = PANEL_WIDTH - BORDER_OFFSET * 2;
@@ -109,7 +109,7 @@ class BetterRightClickPanel extends PluginPanel
 	private final ColorPickerManager colorPickerManager;
 
 	private final ThemePreview preview;
-	private final JLabel hdMenuWarning = buildHdMenuWarning();
+	private final JLabel interfaceStylesWarning = buildInterfaceStylesWarning();
 	private final JComboBox<Theme> themeCombo = new JComboBox<>();
 	private final JButton saveButton = new JButton("Save");
 	private final JButton revertButton = new JButton("Revert");
@@ -157,30 +157,30 @@ class BetterRightClickPanel extends PluginPanel
 	}
 
 	/**
-	 * Shows or hides the HD menu conflict banner at the top of the panel. EDT only.
+	 * Shows or hides the Interface Styles conflict banner at the top of the panel. EDT only.
 	 */
-	void setHdMenuWarningVisible(boolean visible)
+	void setInterfaceStylesWarningVisible(boolean visible)
 	{
 		// Removed rather than hidden: DynamicGridLayout still reserves space for invisible children.
-		if (visible == (hdMenuWarning.getParent() == this))
+		if (visible == (interfaceStylesWarning.getParent() == this))
 		{
 			return;
 		}
 		if (visible)
 		{
-			add(hdMenuWarning, 0);
+			add(interfaceStylesWarning, 0);
 		}
 		else
 		{
-			remove(hdMenuWarning);
+			remove(interfaceStylesWarning);
 		}
 		revalidate();
 		repaint();
 	}
 
-	private static JLabel buildHdMenuWarning()
+	private static JLabel buildInterfaceStylesWarning()
 	{
-		JLabel label = new WrappingLabel("<html>" + HD_MENU_WARNING + "</html>");
+		JLabel label = new WrappingLabel("<html>" + INTERFACE_STYLES_WARNING + "</html>");
 		label.setFont(FontManager.getRunescapeSmallFont());
 		label.setForeground(Color.BLACK);
 		label.setBackground(ColorScheme.PROGRESS_INPROGRESS_COLOR);
