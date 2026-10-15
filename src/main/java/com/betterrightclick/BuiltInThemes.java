@@ -30,7 +30,7 @@ final class BuiltInThemes
 			true, false, true, FontChoice.RS_BOLD, 12, true)
 	));
 
-	static final String DEFAULT_ID = "dark";
+	static final String DEFAULT_ID = "classic";
 
 	private BuiltInThemes()
 	{
