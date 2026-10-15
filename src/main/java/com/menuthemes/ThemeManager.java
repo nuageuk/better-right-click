@@ -279,7 +279,8 @@ class ThemeManager
 			&& a.headerText.equals(b.headerText) && a.text.equals(b.text) && a.hover.equals(b.hover)
 			&& a.accent.equals(b.accent) && a.radius == b.radius && a.opacity == b.opacity
 			&& a.hoverStyle == b.hoverStyle && a.showBorder == b.showBorder && a.showShadow == b.showShadow
-			&& a.showHeader == b.showHeader;
+			&& a.showHeader == b.showHeader && a.font == b.font && a.fontSize == b.fontSize
+			&& a.textShadow == b.textShadow;
 	}
 
 	private void persistUserThemes()
@@ -318,6 +319,9 @@ class ThemeManager
 		boolean showBorder;
 		boolean showShadow;
 		boolean showHeader;
+		String font;
+		int fontSize;
+		boolean textShadow;
 
 		static StoredTheme from(Theme t)
 		{
@@ -337,6 +341,9 @@ class ThemeManager
 			s.showBorder = t.showBorder;
 			s.showShadow = t.showShadow;
 			s.showHeader = t.showHeader;
+			s.font = t.font.name();
+			s.fontSize = t.fontSize;
+			s.textShadow = t.textShadow;
 			return s;
 		}
 
@@ -355,10 +362,20 @@ class ThemeManager
 			{
 				style = HoverStyle.FILL;
 			}
+			FontChoice fontChoice;
+			try
+			{
+				fontChoice = FontChoice.valueOf(font);
+			}
+			catch (IllegalArgumentException | NullPointerException e)
+			{
+				fontChoice = FontChoice.RS_REGULAR;
+			}
 			return new Theme(id, name == null || name.isEmpty() ? "Theme" : name, false,
 				new Color(bg, true), new Color(border, true), new Color(header, true), new Color(headerText, true),
 				new Color(text, true), new Color(hover, true), new Color(accent, true),
-				clamp(radius, 0, 8), clamp(opacity, 40, 100), style, showBorder, showShadow, showHeader);
+				clamp(radius, 0, 8), clamp(opacity, 40, 100), style, showBorder, showShadow, showHeader,
+				fontChoice, clamp(fontSize, 11, 13), textShadow);
 		}
 
 		private static int clamp(int value, int min, int max)

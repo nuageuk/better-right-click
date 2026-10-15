@@ -54,11 +54,11 @@ final class MenuRenderer
 		int baselineNudge = config.baselineNudge();
 		int radius = theme.radius;
 		int alpha = (int) Math.round(theme.opacity * 255 / 100.0);
-		boolean shadow = config.textShadow();
+		boolean shadow = theme.textShadow;
 		Color accent = theme.accent;
 		HoverStyle hoverStyle = theme.hoverStyle;
 
-		Font font = buildFont(config.font(), config.fontSize());
+		Font font = buildFont(theme.font, theme.fontSize);
 		graphics.setFont(font);
 		FontMetrics metrics = graphics.getFontMetrics();
 		int headerTextY = y + centreOffset(headerHeight, metrics, baselineNudge);
@@ -96,7 +96,7 @@ final class MenuRenderer
 
 		boolean highlightsOn = config.highlightsEnabled();
 		Map<String, Color> rules = highlightsOn ? parseHighlightRules(config.highlightRules()) : Collections.emptyMap();
-		Font boldFont = highlightsOn ? buildBoldFont(config.font(), config.fontSize()) : font;
+		Font boldFont = highlightsOn ? buildBoldFont(theme.font, theme.fontSize) : font;
 
 		for (int rowIndex = 0; rowIndex < rows.size(); rowIndex++)
 		{

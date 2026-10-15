@@ -3,351 +3,682 @@ package com.menuthemes;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
-import java.awt.Cursor;
-import java.awt.Dimension;
+import java.awt.GridLayout;
 import java.awt.Toolkit;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.StringSelection;
 import java.awt.datatransfer.UnsupportedFlavorException;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import javax.inject.Inject;
 import javax.swing.BorderFactory;
-import javax.swing.DefaultListModel;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
+import javax.swing.JComponent;
 import javax.swing.JLabel;
-import javax.swing.JList;
+import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
-import javax.swing.JSeparator;
+import javax.swing.JPopupMenu;
 import javax.swing.JSpinner;
+import javax.swing.JTextField;
 import javax.swing.SpinnerNumberModel;
-import javax.swing.Timer;
 import javax.swing.border.EmptyBorder;
+import javax.swing.event.PopupMenuEvent;
+import javax.swing.event.PopupMenuListener;
 import net.runelite.api.Client;
+import net.runelite.client.config.ConfigManager;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.DynamicGridLayout;
-import net.runelite.client.ui.FontManager;
 import net.runelite.client.ui.PluginPanel;
+import net.runelite.client.ui.components.ColorJButton;
+import net.runelite.client.ui.components.TitleCaseListCellRenderer;
 import net.runelite.client.ui.components.colorpicker.ColorPickerManager;
 import net.runelite.client.ui.components.colorpicker.RuneliteColorPicker;
+import net.runelite.client.util.ColorUtil;
 
+/**
+ * Styled to match the native per-plugin config panel (ConfigPanel): relies on the same inherited
+ * {@code PluginPanel} padding/layout, {@link ColorJButton} colour swatches, {@link TitleCaseListCellRenderer}
+ * for enum combos, and {@link CollapsibleSection}s that mirror ConfigPanel's section chrome.
+ */
 class MenuThemesPanel extends PluginPanel
 {
 	private final Client client;
 	private final ThemeManager themeManager;
 	private final MenuThemesConfig config;
+	private final ConfigManager configManager;
 	private final ColorPickerManager colorPickerManager;
 
 	private final ThemePreview preview;
-	private final DefaultListModel<Theme> listModel = new DefaultListModel<>();
-	private final JList<Theme> themeList = new JList<>(listModel);
-
-	private final List<Runnable> swatchRefreshers = new ArrayList<>();
-	private final JSpinner radiusSpinner = new JSpinner(new SpinnerNumberModel(6, 0, 8, 1));
-	private final JSpinner opacitySpinner = new JSpinner(new SpinnerNumberModel(96, 40, 100, 1));
-	private final JComboBox<HoverStyle> hoverStyleCombo = new JComboBox<>(HoverStyle.values());
-	private final JCheckBox borderCheck = new JCheckBox("Border");
-	private final JCheckBox shadowCheck = new JCheckBox("Drop shadow");
-	private final JCheckBox headerCheck = new JCheckBox("Header");
-
+	private final JComboBox<Theme> themeCombo = new JComboBox<>();
 	private final JButton saveButton = new JButton("Save");
-	private final JButton renameButton = new JButton("Rename");
-	private final JButton deleteButton = new JButton("Delete");
+	private final JButton revertButton = new JButton("Revert");
+
+	// Theme-bound controls; re-synced whenever the active/working theme changes.
+	private final List<Runnable> themeControlRefreshers = new ArrayList<>();
+	private JSpinner fontSizeSpinner;
+
+	private final JPanel rulesPanel = new JPanel();
 
 	private boolean refreshing;
 
 	@Inject
 	MenuThemesPanel(Client client, ThemeManager themeManager, MenuThemesConfig config,
-		ColorPickerManager colorPickerManager)
+		ConfigManager configManager, ColorPickerManager colorPickerManager)
 	{
 		this.client = client;
 		this.themeManager = themeManager;
 		this.config = config;
+		this.configManager = configManager;
 		this.colorPickerManager = colorPickerManager;
-
-		setLayout(new BorderLayout());
-		setBorder(new EmptyBorder(8, 0, 0, 0));
 
 		preview = new ThemePreview(client, themeManager, config);
 
-		JPanel content = new JPanel();
-		content.setLayout(new DynamicGridLayout(0, 1, 0, 8));
-		content.add(preview);
-		content.add(new JSeparator());
-		content.add(buildThemeListPanel());
-		content.add(new JSeparator());
-		content.add(buildEditorPanel());
-		content.add(buildActionButtons());
-
-		add(content, BorderLayout.NORTH);
+		add(preview);
+		add(buildThemeRow());
+		add(buildColoursSection());
+		add(buildStyleSection());
+		add(buildTextSection());
+		add(buildHighlightsSection());
+		add(buildTargetsSection());
+		add(buildLevelsSection());
+		add(buildAdvancedSection());
 
 		refresh();
 	}
 
-	private JPanel buildThemeListPanel()
+	// --- Theme row: combo + save/revert/more ---
+
+	private JPanel buildThemeRow()
 	{
-		JPanel panel = new JPanel(new BorderLayout());
-		panel.setBackground(ColorScheme.DARK_GRAY_COLOR);
+		JPanel container = new JPanel();
+		container.setLayout(new DynamicGridLayout(0, 1, 0, 4));
 
-		JLabel title = titleLabel("Themes");
-		panel.add(title, BorderLayout.NORTH);
-
-		themeList.setCellRenderer((list, theme, index, isSelected, hasFocus) ->
+		themeCombo.setRenderer((list, theme, index, isSelected, hasFocus) ->
 		{
-			boolean active = theme.id.equals(themeManager.activeId());
-			StringBuilder text = new StringBuilder();
-			if (theme.builtIn)
-			{
-				text.append("🔒 ");
-			}
-			text.append(theme.name);
-			if (active && themeManager.isEdited())
-			{
-				text.append("  • edited");
-			}
-
-			JLabel label = new JLabel(text.toString());
+			JLabel label = new JLabel(themeLabel(theme));
 			label.setOpaque(true);
-			label.setBorder(new EmptyBorder(4, 8, 4, 8));
-			label.setFont(FontManager.getRunescapeSmallFont());
+			label.setBorder(new EmptyBorder(4, 4, 4, 4));
 			label.setBackground(isSelected ? ColorScheme.DARK_GRAY_HOVER_COLOR : ColorScheme.DARKER_GRAY_COLOR);
-			label.setForeground(active ? Color.WHITE : ColorScheme.LIGHT_GRAY_COLOR);
+			label.setForeground(Color.WHITE);
 			return label;
 		});
-		themeList.setFixedCellHeight(24);
-		themeList.setBackground(ColorScheme.DARKER_GRAY_COLOR);
-		themeList.addListSelectionListener(e ->
+		themeCombo.addActionListener(e ->
 		{
-			if (refreshing || e.getValueIsAdjusting())
+			if (refreshing)
 			{
 				return;
 			}
-			Theme selected = themeList.getSelectedValue();
+			Theme selected = (Theme) themeCombo.getSelectedItem();
 			if (selected != null && !selected.id.equals(themeManager.activeId()))
 			{
 				themeManager.applyTheme(selected.id);
 				refresh();
 			}
 		});
+		container.add(themeCombo);
 
-		panel.add(themeList, BorderLayout.CENTER);
-		return panel;
-	}
-
-	private JPanel buildEditorPanel()
-	{
-		JPanel panel = new JPanel();
-		panel.setLayout(new DynamicGridLayout(0, 1, 0, 4));
-		panel.setBackground(ColorScheme.DARK_GRAY_COLOR);
-		panel.add(titleLabel("Colours"));
-
-		addColourRow(panel, "Background", t -> t.bg, Theme::withBg);
-		addColourRow(panel, "Border", t -> t.border, Theme::withBorder);
-		addColourRow(panel, "Header", t -> t.header, Theme::withHeader);
-		addColourRow(panel, "Header text", t -> t.headerText, Theme::withHeaderText);
-		addColourRow(panel, "Option text", t -> t.text, Theme::withText);
-		addColourRow(panel, "Hover", t -> t.hover, Theme::withHover);
-		addColourRow(panel, "Accent", t -> t.accent, Theme::withAccent);
-
-		panel.add(titleLabel("Style"));
-
-		JPanel radiusRow = labelled("Corner radius", radiusSpinner);
-		radiusSpinner.addChangeListener(e -> apply(t -> t.withRadius((Integer) radiusSpinner.getValue())));
-		panel.add(radiusRow);
-
-		JPanel opacityRow = labelled("Opacity", opacitySpinner);
-		opacitySpinner.addChangeListener(e -> apply(t -> t.withOpacity((Integer) opacitySpinner.getValue())));
-		panel.add(opacityRow);
-
-		JPanel hoverRow = labelled("Hover style", hoverStyleCombo);
-		hoverStyleCombo.addActionListener(e -> apply(t -> t.withHoverStyle((HoverStyle) hoverStyleCombo.getSelectedItem())));
-		panel.add(hoverRow);
-
-		borderCheck.setOpaque(false);
-		borderCheck.setForeground(Color.WHITE);
-		borderCheck.addActionListener(e -> apply(t -> t.withShowBorder(borderCheck.isSelected())));
-		panel.add(borderCheck);
-
-		shadowCheck.setOpaque(false);
-		shadowCheck.setForeground(Color.WHITE);
-		shadowCheck.addActionListener(e -> apply(t -> t.withShowShadow(shadowCheck.isSelected())));
-		panel.add(shadowCheck);
-
-		headerCheck.setOpaque(false);
-		headerCheck.setForeground(Color.WHITE);
-		headerCheck.addActionListener(e -> apply(t -> t.withShowHeader(headerCheck.isSelected())));
-		panel.add(headerCheck);
-
-		return panel;
-	}
-
-	private JPanel buildActionButtons()
-	{
-		JPanel panel = new JPanel();
-		panel.setLayout(new DynamicGridLayout(0, 2, 4, 4));
-		panel.setBackground(ColorScheme.DARK_GRAY_COLOR);
-
+		JPanel buttons = new JPanel(new GridLayout(1, 4, 4, 0));
 		saveButton.addActionListener(e ->
 		{
 			themeManager.save();
 			refresh();
 		});
-		panel.add(saveButton);
+		buttons.add(saveButton);
 
-		JButton saveAsButton = new JButton("Save as new…");
+		JButton saveAsButton = new JButton("Save as…");
 		saveAsButton.addActionListener(e -> promptSaveAsNew());
-		panel.add(saveAsButton);
+		buttons.add(saveAsButton);
 
-		JButton revertButton = new JButton("Revert");
 		revertButton.addActionListener(e ->
 		{
 			themeManager.revert();
 			refresh();
 		});
-		panel.add(revertButton);
+		buttons.add(revertButton);
 
-		renameButton.addActionListener(e -> promptRename());
-		panel.add(renameButton);
+		buttons.add(buildMoreButton());
+		container.add(buttons);
 
-		JButton duplicateButton = new JButton("Duplicate");
-		duplicateButton.addActionListener(e ->
+		return container;
+	}
+
+	private JButton buildMoreButton()
+	{
+		JButton button = new JButton("⋯");
+		button.setToolTipText("More theme actions");
+
+		JPopupMenu menu = new JPopupMenu();
+		JMenuItem renameItem = new JMenuItem("Rename");
+		renameItem.addActionListener(e -> promptRename());
+		JMenuItem duplicateItem = new JMenuItem("Duplicate");
+		duplicateItem.addActionListener(e ->
 		{
 			themeManager.duplicate();
 			refresh();
 		});
-		panel.add(duplicateButton);
+		JMenuItem deleteItem = new JMenuItem("Delete");
+		deleteItem.addActionListener(e -> promptDelete());
+		JMenuItem exportItem = new JMenuItem("Export");
+		exportItem.addActionListener(e -> exportActive());
+		JMenuItem importItem = new JMenuItem("Import");
+		importItem.addActionListener(e -> promptImport());
 
-		deleteButton.addActionListener(e -> promptDelete());
-		panel.add(deleteButton);
+		menu.add(renameItem);
+		menu.add(duplicateItem);
+		menu.add(deleteItem);
+		menu.addSeparator();
+		menu.add(exportItem);
+		menu.add(importItem);
 
-		JButton exportButton = new JButton("Export");
-		exportButton.addActionListener(e -> exportActive(exportButton));
-		panel.add(exportButton);
-
-		JButton importButton = new JButton("Import");
-		importButton.addActionListener(e -> promptImport());
-		panel.add(importButton);
-
-		return panel;
-	}
-
-	private void addColourRow(JPanel container, String label, Function<Theme, Color> getter,
-		BiFunction<Theme, Color, Theme> setter)
-	{
-		JPanel row = new JPanel(new BorderLayout());
-		row.setBackground(ColorScheme.DARK_GRAY_COLOR);
-
-		JLabel text = new JLabel(label);
-		text.setForeground(Color.WHITE);
-		text.setFont(FontManager.getRunescapeSmallFont());
-
-		JPanel swatch = new JPanel();
-		swatch.setPreferredSize(new Dimension(24, 20));
-		swatch.setBorder(BorderFactory.createLineBorder(ColorScheme.MEDIUM_GRAY_COLOR));
-		swatch.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-		swatch.addMouseListener(new MouseAdapter()
+		menu.addPopupMenuListener(new PopupMenuListener()
 		{
 			@Override
-			public void mouseClicked(MouseEvent e)
+			public void popupMenuWillBecomeVisible(PopupMenuEvent e)
 			{
-				Color current = getter.apply(themeManager.effectiveTheme());
-				RuneliteColorPicker picker = colorPickerManager.create(swatch, current, label, true);
-				picker.setOnColorChange(c ->
-				{
-					apply(t -> setter.apply(t, c));
-					swatch.setBackground(c);
-				});
-				picker.setVisible(true);
+				boolean userTheme = !themeManager.active().builtIn;
+				renameItem.setEnabled(userTheme);
+				deleteItem.setEnabled(userTheme);
+			}
+
+			@Override
+			public void popupMenuWillBecomeInvisible(PopupMenuEvent e)
+			{
+			}
+
+			@Override
+			public void popupMenuCanceled(PopupMenuEvent e)
+			{
 			}
 		});
 
-		swatchRefreshers.add(() -> swatch.setBackground(getter.apply(themeManager.effectiveTheme())));
-
-		row.add(text, BorderLayout.WEST);
-		row.add(swatch, BorderLayout.EAST);
-		container.add(row);
+		button.addActionListener(e -> menu.show(button, 0, button.getHeight()));
+		return button;
 	}
 
-	private static JPanel labelled(String label, Component control)
+	private static String themeLabel(Theme theme)
 	{
-		JPanel row = new JPanel(new BorderLayout());
-		row.setBackground(ColorScheme.DARK_GRAY_COLOR);
-		JLabel text = new JLabel(label);
-		text.setForeground(Color.WHITE);
-		text.setFont(FontManager.getRunescapeSmallFont());
-		row.add(text, BorderLayout.WEST);
-		row.add(control, BorderLayout.EAST);
-		return row;
+		return theme.builtIn ? "🔒 " + theme.name : theme.name;
 	}
 
-	private static JLabel titleLabel(String text)
+	// --- Theme-bound sections ---
+
+	private CollapsibleSection buildColoursSection()
 	{
-		JLabel label = new JLabel(text);
-		label.setForeground(Color.WHITE);
-		label.setFont(FontManager.getRunescapeBoldFont());
-		return label;
+		CollapsibleSection section = new CollapsibleSection("Colours", "The active theme's colours", false);
+		section.addRow(themeColourRow("Background", t -> t.bg, Theme::withBg));
+		section.addRow(themeColourRow("Border", t -> t.border, Theme::withBorder));
+		section.addRow(themeColourRow("Header", t -> t.header, Theme::withHeader));
+		section.addRow(themeColourRow("Header text", t -> t.headerText, Theme::withHeaderText));
+		section.addRow(themeColourRow("Option text", t -> t.text, Theme::withText));
+		section.addRow(themeColourRow("Hover", t -> t.hover, Theme::withHover));
+		section.addRow(themeColourRow("Accent", t -> t.accent, Theme::withAccent));
+		return section;
+	}
+
+	private CollapsibleSection buildStyleSection()
+	{
+		CollapsibleSection section = new CollapsibleSection("Style", "The active theme's shape and hover style", false);
+
+		JSpinner radiusSpinner = themeIntSpinner(t -> t.radius, Theme::withRadius, 0, 8);
+		section.addRow(row("Corner radius", radiusSpinner));
+
+		JSpinner opacitySpinner = themeIntSpinner(t -> t.opacity, Theme::withOpacity, 40, 100);
+		section.addRow(row("Opacity", opacitySpinner));
+
+		JComboBox<HoverStyle> hoverCombo = new JComboBox<>(HoverStyle.values());
+		hoverCombo.setRenderer(new TitleCaseListCellRenderer());
+		hoverCombo.addActionListener(e ->
+		{
+			if (!refreshing)
+			{
+				apply(t -> t.withHoverStyle((HoverStyle) hoverCombo.getSelectedItem()));
+			}
+		});
+		themeControlRefreshers.add(() -> hoverCombo.setSelectedItem(themeManager.effectiveTheme().hoverStyle));
+		section.addRow(row("Hover style", hoverCombo));
+
+		section.addRow(row("Border", themeCheckBox(t -> t.showBorder, Theme::withShowBorder)));
+		section.addRow(row("Drop shadow", themeCheckBox(t -> t.showShadow, Theme::withShowShadow)));
+		section.addRow(row("Header", themeCheckBox(t -> t.showHeader, Theme::withShowHeader)));
+
+		return section;
+	}
+
+	private CollapsibleSection buildTextSection()
+	{
+		CollapsibleSection section = new CollapsibleSection("Text", "The active theme's font", false);
+
+		JComboBox<FontChoice> fontCombo = new JComboBox<>(FontChoice.values());
+		fontCombo.setRenderer(new TitleCaseListCellRenderer());
+		fontCombo.addActionListener(e ->
+		{
+			FontChoice selected = (FontChoice) fontCombo.getSelectedItem();
+			fontSizeSpinner.setEnabled(selected == FontChoice.SANS || selected == FontChoice.MONO);
+			if (!refreshing)
+			{
+				apply(t -> t.withFont(selected));
+			}
+		});
+		themeControlRefreshers.add(() -> fontCombo.setSelectedItem(themeManager.effectiveTheme().font));
+		section.addRow(row("Font", fontCombo));
+
+		fontSizeSpinner = themeIntSpinner(t -> t.fontSize, Theme::withFontSize, 11, 13);
+		section.addRow(row("Font size (Sans/Mono only)", fontSizeSpinner));
+
+		section.addRow(row("Text shadow", themeCheckBox(t -> t.textShadow, Theme::withTextShadow)));
+
+		return section;
+	}
+
+	private JSpinner themeIntSpinner(Function<Theme, Integer> getter, BiFunction<Theme, Integer, Theme> setter,
+		int min, int max)
+	{
+		JSpinner spinner = new JSpinner(new SpinnerNumberModel(min, min, max, 1));
+		spinnerFieldWidth(spinner);
+		spinner.addChangeListener(e ->
+		{
+			if (!refreshing)
+			{
+				apply(t -> setter.apply(t, (Integer) spinner.getValue()));
+			}
+		});
+		themeControlRefreshers.add(() -> spinner.setValue(getter.apply(themeManager.effectiveTheme())));
+		return spinner;
+	}
+
+	private JCheckBox themeCheckBox(Function<Theme, Boolean> getter, BiFunction<Theme, Boolean, Theme> setter)
+	{
+		JCheckBox checkbox = new JCheckBox();
+		checkbox.addActionListener(e ->
+		{
+			if (!refreshing)
+			{
+				apply(t -> setter.apply(t, checkbox.isSelected()));
+			}
+		});
+		themeControlRefreshers.add(() -> checkbox.setSelected(getter.apply(themeManager.effectiveTheme())));
+		return checkbox;
+	}
+
+	private JPanel themeColourRow(String label, Function<Theme, Color> getter,
+		BiFunction<Theme, Color, Theme> setter)
+	{
+		ColorJButton button = colourButton(getter.apply(themeManager.effectiveTheme()), label, c -> apply(t -> setter.apply(t, c)));
+		themeControlRefreshers.add(() -> setColourButton(button, getter.apply(themeManager.effectiveTheme())));
+		return row(label, button);
 	}
 
 	/**
-	 * Applies a single edit to the working copy and refreshes the dependent views.
+	 * Applies a single edit to the working copy and refreshes every dependent view.
 	 */
 	private void apply(Function<Theme, Theme> mutator)
 	{
 		themeManager.setWorking(mutator.apply(themeManager.effectiveTheme()));
 		preview.repaint();
-		themeList.repaint();
-		updateButtonStates();
+		themeCombo.repaint();
+		saveButton.setEnabled(!themeManager.active().builtIn && themeManager.isEdited());
+		revertButton.setEnabled(themeManager.isEdited());
 	}
+
+	// --- Global sections ---
+
+	private CollapsibleSection buildHighlightsSection()
+	{
+		CollapsibleSection section = new CollapsibleSection("Action highlights", "Highlight specific menu options", false);
+
+		JCheckBox enabled = new JCheckBox();
+		enabled.setSelected(config.highlightsEnabled());
+		enabled.addActionListener(e -> configManager.setConfiguration(MenuThemesConfig.GROUP, "highlightsEnabled", enabled.isSelected()));
+		section.addRow(row("Enabled", enabled));
+
+		JCheckBox bold = new JCheckBox();
+		bold.setSelected(config.highlightsBold());
+		bold.addActionListener(e -> configManager.setConfiguration(MenuThemesConfig.GROUP, "highlightsBold", bold.isSelected()));
+		section.addRow(row("Bold", bold));
+
+		rulesPanel.setLayout(new DynamicGridLayout(0, 1, 0, 4));
+		rebuildRuleRows();
+		section.addRow(rulesPanel);
+
+		JButton addRule = new JButton("+ Add rule");
+		addRule.addActionListener(e ->
+		{
+			List<Rule> rules = parseRules();
+			rules.add(new Rule("", Color.WHITE));
+			saveRules(rules);
+			rebuildRuleRows();
+		});
+		section.addRow(addRule);
+
+		return section;
+	}
+
+	private CollapsibleSection buildTargetsSection()
+	{
+		CollapsibleSection section = new CollapsibleSection("Targets", "Colour menu targets by entity type", false);
+
+		JComboBox<TargetMode> modeCombo = new JComboBox<>(TargetMode.values());
+		modeCombo.setRenderer(new TitleCaseListCellRenderer());
+		modeCombo.setSelectedItem(config.targetMode());
+
+		ColorJButton npc = colourButton(config.npcColour(), "NPC colour", globalColourWriter("npcColour"));
+		ColorJButton player = colourButton(config.playerColour(), "Player colour", globalColourWriter("playerColour"));
+		ColorJButton item = colourButton(config.itemColour(), "Item colour", globalColourWriter("itemColour"));
+		ColorJButton object = colourButton(config.objectColour(), "Object colour", globalColourWriter("objectColour"));
+		ColorJButton other = colourButton(config.otherColour(), "Other colour", globalColourWriter("otherColour"));
+
+		Runnable updateEnabled = () ->
+		{
+			boolean custom = modeCombo.getSelectedItem() == TargetMode.CUSTOM;
+			npc.setEnabled(custom);
+			player.setEnabled(custom);
+			item.setEnabled(custom);
+			object.setEnabled(custom);
+			other.setEnabled(custom);
+		};
+		updateEnabled.run();
+		modeCombo.addActionListener(e ->
+		{
+			configManager.setConfiguration(MenuThemesConfig.GROUP, "targetMode", modeCombo.getSelectedItem());
+			updateEnabled.run();
+		});
+
+		section.addRow(row("Mode", modeCombo));
+		section.addRow(row("NPC", npc));
+		section.addRow(row("Player", player));
+		section.addRow(row("Item", item));
+		section.addRow(row("Object", object));
+		section.addRow(row("Other", other));
+		return section;
+	}
+
+	private CollapsibleSection buildLevelsSection()
+	{
+		CollapsibleSection section = new CollapsibleSection("Combat levels", "Colour the combat level shown in targets", false);
+
+		JComboBox<CombatLevelMode> modeCombo = new JComboBox<>(CombatLevelMode.values());
+		modeCombo.setRenderer(new TitleCaseListCellRenderer());
+		modeCombo.setSelectedItem(config.combatLevelMode());
+
+		ColorJButton lower = colourButton(config.lowerLevelColour(), "Lower level colour", globalColourWriter("lowerLevelColour"));
+		ColorJButton same = colourButton(config.sameLevelColour(), "Same level colour", globalColourWriter("sameLevelColour"));
+		ColorJButton higher = colourButton(config.higherLevelColour(), "Higher level colour", globalColourWriter("higherLevelColour"));
+
+		Runnable updateEnabled = () ->
+		{
+			boolean custom = modeCombo.getSelectedItem() == CombatLevelMode.CUSTOM;
+			lower.setEnabled(custom);
+			same.setEnabled(custom);
+			higher.setEnabled(custom);
+		};
+		updateEnabled.run();
+		modeCombo.addActionListener(e ->
+		{
+			configManager.setConfiguration(MenuThemesConfig.GROUP, "combatLevelMode", modeCombo.getSelectedItem());
+			updateEnabled.run();
+		});
+
+		section.addRow(row("Mode", modeCombo));
+		section.addRow(row("Lower level", lower));
+		section.addRow(row("Same level", same));
+		section.addRow(row("Higher level", higher));
+		return section;
+	}
+
+	private CollapsibleSection buildAdvancedSection()
+	{
+		CollapsibleSection section = new CollapsibleSection("Advanced", "Geometry and debugging", true);
+
+		section.addRow(row("Header height", globalIntSpinner(config.headerHeight(), 0, 60, "headerHeight")));
+		section.addRow(row("Row height", globalIntSpinner(config.rowHeight(), 5, 40, "rowHeight")));
+		section.addRow(row("Text offset X", globalIntSpinner(config.textOffsetX(), 0, 20, "textOffsetX")));
+		section.addRow(row("Baseline nudge", globalIntSpinner(config.baselineNudge(), -10, 10, "baselineNudge")));
+
+		JCheckBox hitRows = new JCheckBox();
+		hitRows.setSelected(config.showHitRows());
+		hitRows.addActionListener(e -> configManager.setConfiguration(MenuThemesConfig.GROUP, "showHitRows", hitRows.isSelected()));
+		section.addRow(row("Show hit rows", hitRows));
+
+		return section;
+	}
+
+	private Consumer<Color> globalColourWriter(String key)
+	{
+		return c -> configManager.setConfiguration(MenuThemesConfig.GROUP, key, c);
+	}
+
+	private JSpinner globalIntSpinner(int value, int min, int max, String key)
+	{
+		JSpinner spinner = new JSpinner(new SpinnerNumberModel(value, min, max, 1));
+		spinnerFieldWidth(spinner);
+		spinner.addChangeListener(e -> configManager.setConfiguration(MenuThemesConfig.GROUP, key, spinner.getValue()));
+		return spinner;
+	}
+
+	// --- Action highlight rules editor ---
+
+	private static final class Rule
+	{
+		private String option;
+		private Color colour;
+
+		private Rule(String option, Color colour)
+		{
+			this.option = option;
+			this.colour = colour;
+		}
+	}
+
+	private List<Rule> parseRules()
+	{
+		List<Rule> rules = new ArrayList<>();
+		for (String line : config.highlightRules().split("\n"))
+		{
+			int eq = line.lastIndexOf('=');
+			if (eq <= 0 || eq == line.length() - 1)
+			{
+				continue;
+			}
+			String option = line.substring(0, eq).trim();
+			String hex = line.substring(eq + 1).trim();
+			if (hex.startsWith("#"))
+			{
+				hex = hex.substring(1);
+			}
+			if (!hex.matches("[0-9a-fA-F]{6}"))
+			{
+				continue;
+			}
+			rules.add(new Rule(option, Color.decode("#" + hex)));
+		}
+		return rules;
+	}
+
+	private void saveRules(List<Rule> rules)
+	{
+		StringBuilder sb = new StringBuilder();
+		for (Rule rule : rules)
+		{
+			if (sb.length() > 0)
+			{
+				sb.append('\n');
+			}
+			sb.append(rule.option).append('=').append(hex(rule.colour));
+		}
+		configManager.setConfiguration(MenuThemesConfig.GROUP, "highlightRules", sb.toString());
+	}
+
+	private void rebuildRuleRows()
+	{
+		rulesPanel.removeAll();
+		List<Rule> rules = parseRules();
+		for (int i = 0; i < rules.size(); i++)
+		{
+			rulesPanel.add(ruleRow(rules.get(i), i));
+		}
+		rulesPanel.revalidate();
+		rulesPanel.repaint();
+	}
+
+	private JPanel ruleRow(Rule rule, int index)
+	{
+		JPanel panel = new JPanel(new BorderLayout(4, 0));
+
+		JTextField optionField = new JTextField(rule.option);
+		optionField.setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 4));
+		optionField.addFocusListener(new FocusAdapter()
+		{
+			@Override
+			public void focusLost(FocusEvent e)
+			{
+				List<Rule> current = parseRules();
+				if (index < current.size())
+				{
+					current.get(index).option = optionField.getText().trim();
+					saveRules(current);
+				}
+			}
+		});
+
+		ColorJButton colourBtn = colourButton(rule.colour, "Rule colour", c ->
+		{
+			List<Rule> current = parseRules();
+			if (index < current.size())
+			{
+				current.get(index).colour = c;
+				saveRules(current);
+			}
+		});
+
+		JButton remove = new JButton("✕");
+		remove.setToolTipText("Remove rule");
+		remove.addActionListener(e ->
+		{
+			List<Rule> current = parseRules();
+			if (index < current.size())
+			{
+				current.remove(index);
+				saveRules(current);
+			}
+			rebuildRuleRows();
+		});
+
+		JPanel right = new JPanel(new BorderLayout(4, 0));
+		right.add(colourBtn, BorderLayout.WEST);
+		right.add(remove, BorderLayout.EAST);
+
+		panel.add(optionField, BorderLayout.CENTER);
+		panel.add(right, BorderLayout.EAST);
+		return panel;
+	}
+
+	// --- Shared widgets ---
+
+	private ColorJButton colourButton(Color initial, String title, Consumer<Color> onChange)
+	{
+		ColorJButton button = new ColorJButton(hex(initial), initial);
+		button.setFocusable(false);
+		button.addMouseListener(new MouseAdapter()
+		{
+			@Override
+			public void mouseClicked(MouseEvent e)
+			{
+				if (!button.isEnabled())
+				{
+					return;
+				}
+				RuneliteColorPicker picker = colorPickerManager.create(button, button.getColor(), title, true);
+				picker.setLocationRelativeTo(button);
+				picker.setOnColorChange(c ->
+				{
+					setColourButton(button, c);
+					onChange.accept(c);
+				});
+				picker.setVisible(true);
+			}
+		});
+		return button;
+	}
+
+	private static void setColourButton(ColorJButton button, Color colour)
+	{
+		button.setColor(colour);
+		button.setText(hex(colour));
+	}
+
+	private static String hex(Color colour)
+	{
+		return "#" + ColorUtil.colorToHexCode(colour).toUpperCase();
+	}
+
+	private static JPanel row(String label, JComponent control)
+	{
+		JPanel panel = new JPanel(new BorderLayout());
+		JLabel text = new JLabel(label);
+		text.setForeground(Color.WHITE);
+		panel.add(text, BorderLayout.CENTER);
+		panel.add(control, BorderLayout.EAST);
+		return panel;
+	}
+
+	private static void spinnerFieldWidth(JSpinner spinner)
+	{
+		Component editor = spinner.getEditor();
+		if (editor instanceof JSpinner.DefaultEditor)
+		{
+			((JSpinner.DefaultEditor) editor).getTextField().setColumns(4);
+		}
+	}
+
+	// --- Refresh / theme actions ---
 
 	private void refresh()
 	{
 		refreshing = true;
 		try
 		{
-			listModel.clear();
+			themeCombo.removeAllItems();
 			for (Theme theme : themeManager.builtIns())
 			{
-				listModel.addElement(theme);
+				themeCombo.addItem(theme);
 			}
 			for (Theme theme : themeManager.userThemes())
 			{
-				listModel.addElement(theme);
+				themeCombo.addItem(theme);
 			}
 
 			Theme active = themeManager.active();
-			for (int i = 0; i < listModel.size(); i++)
+			for (int i = 0; i < themeCombo.getItemCount(); i++)
 			{
-				if (listModel.get(i).id.equals(active.id))
+				if (themeCombo.getItemAt(i).id.equals(active.id))
 				{
-					themeList.setSelectedIndex(i);
+					themeCombo.setSelectedIndex(i);
 					break;
 				}
 			}
 
-			Theme working = themeManager.effectiveTheme();
-			for (Runnable r : swatchRefreshers)
+			for (Runnable r : themeControlRefreshers)
 			{
 				r.run();
 			}
-			radiusSpinner.setValue(working.radius);
-			opacitySpinner.setValue(working.opacity);
-			hoverStyleCombo.setSelectedItem(working.hoverStyle);
-			borderCheck.setSelected(working.showBorder);
-			shadowCheck.setSelected(working.showShadow);
-			headerCheck.setSelected(working.showHeader);
 
-			updateButtonStates();
+			saveButton.setEnabled(!active.builtIn && themeManager.isEdited());
+			revertButton.setEnabled(themeManager.isEdited());
+
 			preview.repaint();
-			themeList.repaint();
+			themeCombo.repaint();
 		}
 		finally
 		{
@@ -355,18 +686,9 @@ class MenuThemesPanel extends PluginPanel
 		}
 	}
 
-	private void updateButtonStates()
-	{
-		boolean userTheme = !themeManager.active().builtIn;
-		saveButton.setEnabled(userTheme && themeManager.isEdited());
-		renameButton.setEnabled(userTheme);
-		deleteButton.setEnabled(userTheme);
-	}
-
 	private void promptSaveAsNew()
 	{
-		String name = JOptionPane.showInputDialog(this, "Theme name:", "Save as new theme",
-			JOptionPane.PLAIN_MESSAGE);
+		String name = JOptionPane.showInputDialog(this, "Theme name:", "Save as new theme", JOptionPane.PLAIN_MESSAGE);
 		if (name != null && !name.trim().isEmpty())
 		{
 			themeManager.saveAsNew(name.trim());
@@ -396,7 +718,7 @@ class MenuThemesPanel extends PluginPanel
 		}
 	}
 
-	private void exportActive(JButton button)
+	private void exportActive()
 	{
 		String payload = themeManager.export(themeManager.activeId());
 		if (payload == null)
@@ -405,17 +727,6 @@ class MenuThemesPanel extends PluginPanel
 		}
 		Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
 		clipboard.setContents(new StringSelection(payload), null);
-
-		String original = button.getText();
-		button.setText("Copied!");
-		button.setEnabled(false);
-		Timer resetTimer = new Timer(1200, e ->
-		{
-			button.setText(original);
-			button.setEnabled(true);
-		});
-		resetTimer.setRepeats(false);
-		resetTimer.start();
 	}
 
 	private void promptImport()
