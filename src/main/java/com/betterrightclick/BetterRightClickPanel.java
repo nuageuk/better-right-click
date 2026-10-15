@@ -319,7 +319,8 @@ class BetterRightClickPanel extends PluginPanel
 		fontCombo.addActionListener(e ->
 		{
 			FontChoice selected = (FontChoice) fontCombo.getSelectedItem();
-			fontSizeSpinner.setEnabled(selected == FontChoice.SANS || selected == FontChoice.MONO);
+			// RuneScape's bitmap fonts come in one size, so the size control would do nothing.
+			fontSizeSpinner.setEnabled(selected != null && selected.isScalable());
 			if (!refreshing)
 			{
 				apply(t -> t.withFont(selected));
@@ -329,7 +330,7 @@ class BetterRightClickPanel extends PluginPanel
 		section.addRow(row("Font", fontCombo));
 
 		fontSizeSpinner = themeIntSpinner(t -> t.fontSize, Theme::withFontSize, Limits.MIN_FONT_SIZE, Limits.MAX_FONT_SIZE);
-		section.addRow(row("Font size", "Applies to the Sans and Mono fonts only", fontSizeSpinner));
+		section.addRow(row("Font size", "Applies to the Sans, Serif and Mono fonts only", fontSizeSpinner));
 
 		section.addRow(row("Text shadow", themeCheckBox(t -> t.textShadow, Theme::withTextShadow)));
 

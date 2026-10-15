@@ -472,16 +472,16 @@ final class MenuRenderer
 
 	private static Font buildFont(FontChoice choice, int size)
 	{
+		if (choice.isScalable())
+		{
+			return new Font(choice.family, Font.PLAIN, size);
+		}
 		switch (choice)
 		{
 			case RS_SMALL:
 				return FontManager.getRunescapeSmallFont();
 			case RS_BOLD:
 				return FontManager.getRunescapeBoldFont();
-			case SANS:
-				return new Font(Font.SANS_SERIF, Font.PLAIN, size);
-			case MONO:
-				return new Font(Font.MONOSPACED, Font.PLAIN, size);
 			case RS_REGULAR:
 			default:
 				return FontManager.getRunescapeFont();
@@ -490,15 +490,7 @@ final class MenuRenderer
 
 	private static Font buildBoldFont(FontChoice choice, int size)
 	{
-		switch (choice)
-		{
-			case SANS:
-				return new Font(Font.SANS_SERIF, Font.BOLD, size);
-			case MONO:
-				return new Font(Font.MONOSPACED, Font.BOLD, size);
-			default:
-				return FontManager.getRunescapeBoldFont();
-		}
+		return choice.isScalable() ? new Font(choice.family, Font.BOLD, size) : FontManager.getRunescapeBoldFont();
 	}
 
 	private OptionSegments optionSegments(String raw)
