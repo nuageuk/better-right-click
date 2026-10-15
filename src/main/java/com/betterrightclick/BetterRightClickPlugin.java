@@ -2,6 +2,7 @@ package com.betterrightclick;
 
 import com.google.inject.Provides;
 import javax.inject.Inject;
+import javax.swing.SwingUtilities;
 import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
@@ -52,6 +53,10 @@ public class BetterRightClickPlugin extends Plugin
 	@Inject
 	private LocalPlayerSnapshot localPlayer;
 
+	// Created in startUp() rather than injected: RuneLite installs its look and feel after plugins
+	// load, and Swing components built before that keep the default light styling. Volatile because
+	// ConfigChanged can arrive on any thread.
+	private volatile BetterRightClickPanel panel;
 	private NavigationButton navigationButton;
 	// Only touched on the client thread, apart from the reset in shutDown.
 	private volatile boolean warnedAboutHdMenu;
@@ -60,10 +65,8 @@ public class BetterRightClickPlugin extends Plugin
 	protected void startUp()
 	{
 		// Build the panel first: it is the step that can throw, and the overlay (which consumes the
-		// vanilla menu) shouldn't be left registered if startUp fails part-way. It's created here rather
-		// than injected because RuneLite installs its look and feel after plugins load, and Swing
-		// components built before that keep the default light styling.
-		BetterRightClickPanel panel = getInjector().getInstance(BetterRightClickPanel.class);
+		// vanilla menu) shouldn't be left registered if startUp fails part-way.
+		panel = getInjector().getInstance(BetterRightClickPanel.class);
 		navigationButton = NavigationButton.builder()
 			.tooltip(NAME)
 			.icon(ImageUtil.loadImageResource(BetterRightClickPlugin.class, "panel_icon.png"))
@@ -75,7 +78,7 @@ public class BetterRightClickPlugin extends Plugin
 		menuOverlay.resetFailure();
 		overlayManager.add(menuOverlay);
 
-		warnIfHdMenuEnabled(configManager.getConfiguration(INTERFACE_STYLES_GROUP, HD_MENU_KEY));
+		onHdMenuSetting(configManager.getConfiguration(INTERFACE_STYLES_GROUP, HD_MENU_KEY));
 	}
 
 	@Override
@@ -87,6 +90,7 @@ public class BetterRightClickPlugin extends Plugin
 			clientToolbar.removeNavigation(navigationButton);
 			navigationButton = null;
 		}
+		panel = null;
 		warnedAboutHdMenu = false;
 		localPlayer.setOnChange(null);
 		localPlayer.clear();
@@ -127,7 +131,7 @@ public class BetterRightClickPlugin extends Plugin
 	{
 		if (INTERFACE_STYLES_GROUP.equals(event.getGroup()) && HD_MENU_KEY.equals(event.getKey()))
 		{
-			warnIfHdMenuEnabled(event.getNewValue());
+			onHdMenuSetting(event.getNewValue());
 		}
 	}
 
@@ -137,10 +141,17 @@ public class BetterRightClickPlugin extends Plugin
 		return configManager.getConfig(BetterRightClickConfig.class);
 	}
 
-	// Called from startUp and ConfigChanged, neither of which is guaranteed to be on the client thread.
-	private void warnIfHdMenuEnabled(String hdMenuValue)
+	// Called from startUp and ConfigChanged, neither of which is guaranteed to be on the EDT or the
+	// client thread.
+	private void onHdMenuSetting(String hdMenuValue)
 	{
-		if (!Boolean.parseBoolean(hdMenuValue))
+		boolean enabled = Boolean.parseBoolean(hdMenuValue);
+		BetterRightClickPanel current = panel;
+		if (current != null)
+		{
+			SwingUtilities.invokeLater(() -> current.setHdMenuWarningVisible(enabled));
+		}
+		if (!enabled)
 		{
 			return;
 		}

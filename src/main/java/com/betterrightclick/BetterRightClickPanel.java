@@ -40,6 +40,7 @@ import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 import net.runelite.client.config.ConfigManager;
+import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.DynamicGridLayout;
 import net.runelite.client.ui.FontManager;
 import net.runelite.client.ui.PluginPanel;
@@ -66,6 +67,11 @@ class BetterRightClickPanel extends PluginPanel
 	private static final String MORE_LABEL = "More ▾";
 	private static final String COPIED_LABEL = "Copied!";
 	private static final int COPIED_FLASH_MS = 1500;
+	private static final String HD_MENU_WARNING = "Interface Styles 'High detail menu' is on and will conflict with "
+		+ "Better Right Click. Turn it off for themes to work.";
+	private static final int WARNING_PADDING = 6;
+	// A fixed text width lets the wrapped HTML label report its real height to the layout.
+	private static final int WARNING_TEXT_WIDTH = PANEL_WIDTH - BORDER_OFFSET * 2 - WARNING_PADDING * 2;
 	private static final Consumer<Color> NOTHING = c ->
 	{
 	};
@@ -76,6 +82,7 @@ class BetterRightClickPanel extends PluginPanel
 	private final ColorPickerManager colorPickerManager;
 
 	private final ThemePreview preview;
+	private final JLabel hdMenuWarning = buildHdMenuWarning();
 	private final JComboBox<Theme> themeCombo = new JComboBox<>();
 	private final JButton saveButton = new JButton("Save");
 	private final JButton revertButton = new JButton("Revert");
@@ -118,6 +125,40 @@ class BetterRightClickPanel extends PluginPanel
 		add(buildAdvancedSection());
 
 		refresh();
+	}
+
+	/**
+	 * Shows or hides the HD menu conflict banner at the top of the panel. EDT only.
+	 */
+	void setHdMenuWarningVisible(boolean visible)
+	{
+		// Removed rather than hidden: DynamicGridLayout still reserves space for invisible children.
+		if (visible == (hdMenuWarning.getParent() == this))
+		{
+			return;
+		}
+		if (visible)
+		{
+			add(hdMenuWarning, 0);
+		}
+		else
+		{
+			remove(hdMenuWarning);
+		}
+		revalidate();
+		repaint();
+	}
+
+	private static JLabel buildHdMenuWarning()
+	{
+		JLabel label = new JLabel("<html><body style='width:" + WARNING_TEXT_WIDTH + "px'>" + HD_MENU_WARNING
+			+ "</body></html>");
+		label.setFont(FontManager.getRunescapeSmallFont());
+		label.setForeground(Color.BLACK);
+		label.setBackground(ColorScheme.PROGRESS_INPROGRESS_COLOR);
+		label.setOpaque(true);
+		label.setBorder(BorderFactory.createEmptyBorder(WARNING_PADDING, WARNING_PADDING, WARNING_PADDING, WARNING_PADDING));
+		return label;
 	}
 
 	// --- Theme row: combo + save/revert/more ---
