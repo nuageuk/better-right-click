@@ -105,7 +105,9 @@ class BetterRightClickPanel extends PluginPanel
 
 		preview = new ThemePreview(localPlayer, themeManager, config);
 
-		add(preview);
+		CollapsibleSection previewSection = new CollapsibleSection("Preview", "Live preview of the active theme", false);
+		previewSection.addRow(preview);
+		add(previewSection);
 		add(buildThemeRow());
 		add(buildColoursSection());
 		add(buildStyleSection());
