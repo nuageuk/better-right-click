@@ -29,6 +29,8 @@ class MenuOverlay extends Overlay
 	private final List<MenuRenderer.Row> rows = new ArrayList<>();
 	private final List<MenuRenderer.Row> rowPool = new ArrayList<>();
 	private final Rectangle bounds = new Rectangle();
+	// Bumped whenever the rows' text changes, so the renderer can reuse the last measured width.
+	private int rowsVersion;
 
 	/**
 	 * Set after the first render failure. The plugin consumes {@code BeforeMenuRender}, so a render
@@ -58,40 +60,50 @@ class MenuOverlay extends Overlay
 	 */
 	boolean shouldDraw()
 	{
+		return drawableEntries() != null;
+	}
+
+	/**
+	 * @return the open menu's entries, or null if we shouldn't replace it. The client copies the
+	 * array on every call, so callers fetch it once.
+	 */
+	private MenuEntry[] drawableEntries()
+	{
 		if (failed || !client.isMenuOpen())
 		{
-			return false;
+			return null;
 		}
 		Menu menu = client.getMenu();
 		if (menu == null)
 		{
-			return false;
+			return null;
 		}
 		MenuEntry[] entries = menu.getMenuEntries();
 		if (entries == null || entries.length == 0)
 		{
-			return false;
+			return null;
 		}
 		for (MenuEntry entry : entries)
 		{
 			if (entry != null && entry.getSubMenu() != null)
 			{
-				return false;
+				return null;
 			}
 		}
-		return true;
+		return entries;
 	}
 
 	@Override
 	public Dimension render(Graphics2D graphics)
 	{
-		if (!shouldDraw())
+		MenuEntry[] entries = drawableEntries();
+		if (entries == null)
 		{
 			return null;
 		}
 		try
 		{
-			renderMenu(graphics, client.getMenu());
+			renderMenu(graphics, client.getMenu(), entries);
 		}
 		catch (RuntimeException e)
 		{
@@ -101,14 +113,17 @@ class MenuOverlay extends Overlay
 		return null;
 	}
 
-	private void renderMenu(Graphics2D graphics, Menu menu)
+	private void renderMenu(Graphics2D graphics, Menu menu, MenuEntry[] entries)
 	{
 		bounds.setBounds(menu.getMenuX(), menu.getMenuY(), menu.getMenuWidth(), menu.getMenuHeight());
 		Theme theme = themeManager.effectiveTheme();
 
-		fillRows(menu.getMenuEntries());
+		if (fillRows(entries))
+		{
+			rowsVersion++;
+		}
 		// Fit the box to what we draw, never past the game's click area; X, Y and row heights stay the game's.
-		bounds.width = Math.min(bounds.width, renderer.measureWidth(graphics, client, theme, config, rows));
+		bounds.width = Math.min(bounds.width, renderer.measureWidth(graphics, client, theme, config, rows, rowsVersion));
 
 		int hoverIndex = hoverIndex(client.getMouseCanvasPosition());
 		Player local = client.getLocalPlayer();
@@ -119,9 +134,12 @@ class MenuOverlay extends Overlay
 	/**
 	 * Entries are stored bottom-up; rows are drawn top-down. A null entry still occupies a row so
 	 * the hover maths stays aligned with the vanilla click areas.
+	 *
+	 * @return true if any row's text differs from the last fill
 	 */
-	private void fillRows(MenuEntry[] entries)
+	private boolean fillRows(MenuEntry[] entries)
 	{
+		boolean changed = entries.length != rows.size();
 		rows.clear();
 		for (int i = entries.length - 1; i >= 0; i--)
 		{
@@ -132,16 +150,12 @@ class MenuOverlay extends Overlay
 			}
 			MenuRenderer.Row row = rowPool.get(slot);
 			MenuEntry entry = entries[i];
-			if (entry != null)
-			{
-				row.set(entry.getOption(), entry.getTarget(), classify(entry));
-			}
-			else
-			{
-				row.set(null, null, MenuRenderer.TargetKind.OTHER);
-			}
+			changed |= entry != null
+				? row.set(entry.getOption(), entry.getTarget(), classify(entry))
+				: row.set(null, null, MenuRenderer.TargetKind.OTHER);
 			rows.add(row);
 		}
+		return changed;
 	}
 
 	private int hoverIndex(Point mouse)

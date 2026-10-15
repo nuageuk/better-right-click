@@ -4,16 +4,18 @@ import javax.inject.Singleton;
 
 /**
  * Local player details captured on the client thread so the sidebar preview, which paints on the
- * EDT, never has to touch {@code Client}. Null while logged out or not yet captured.
+ * EDT, never has to touch {@code Client}. {@link #UNKNOWN} while logged out or not yet captured.
  */
 @Singleton
 class LocalPlayerSnapshot
 {
-	private volatile Integer combatLevel;
+	static final int UNKNOWN = -1;
+
+	private volatile int combatLevel = UNKNOWN;
 	// Called from the client thread, so it must be safe off the EDT (repaint() is).
 	private volatile Runnable onChange;
 
-	Integer combatLevel()
+	int combatLevel()
 	{
 		return combatLevel;
 	}
@@ -25,8 +27,7 @@ class LocalPlayerSnapshot
 
 	void set(int level)
 	{
-		Integer current = combatLevel;
-		if (current == null || current != level)
+		if (level != combatLevel)
 		{
 			combatLevel = level;
 			notifyChange();
@@ -35,11 +36,7 @@ class LocalPlayerSnapshot
 
 	void clear()
 	{
-		if (combatLevel != null)
-		{
-			combatLevel = null;
-			notifyChange();
-		}
+		set(UNKNOWN);
 	}
 
 	private void notifyChange()

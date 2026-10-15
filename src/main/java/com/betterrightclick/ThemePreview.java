@@ -93,9 +93,9 @@ class ThemePreview extends JPanel
 		// The renderer always leaves room for the header, so shift up when it's hidden.
 		bounds.setBounds(SIDE_MARGIN, rowsTop(theme) - MenuRenderer.HEADER_HEIGHT, width,
 			MenuRenderer.HEADER_HEIGHT + rowsHeight());
-		Integer level = localPlayer.combatLevel();
+		int level = localPlayer.combatLevel();
 		renderer.render((Graphics2D) g, null, theme, config, SAMPLE_ROWS, bounds, hoverIndex,
-			level != null ? level : PLACEHOLDER_COMBAT_LEVEL);
+			level != LocalPlayerSnapshot.UNKNOWN ? level : PLACEHOLDER_COMBAT_LEVEL);
 	}
 
 	private void updateHover(int mouseY)

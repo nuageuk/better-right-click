@@ -171,16 +171,26 @@ class BetterRightClickPanel extends PluginPanel
 	 */
 	private static final class WrappingLabel extends JLabel
 	{
+		private View measuredView;
+		private int measuredWidth;
+		private int measuredHeight;
+		private int laidOutWidth;
+
 		private WrappingLabel(String html)
 		{
 			super(html);
-			// The height depends on the width, which is only known after layout, so lay out again.
+			// The height depends on the width, which is only known after layout, so lay out once more
+			// when the width changes (not on the height change that follows).
 			addComponentListener(new ComponentAdapter()
 			{
 				@Override
 				public void componentResized(ComponentEvent e)
 				{
-					revalidate();
+					if (getWidth() != laidOutWidth)
+					{
+						laidOutWidth = getWidth();
+						revalidate();
+					}
 				}
 			});
 		}
@@ -193,11 +203,17 @@ class BetterRightClickPanel extends PluginPanel
 			{
 				return super.getPreferredSize();
 			}
-			Insets insets = getInsets();
 			int width = getWidth() > 0 ? getWidth() : WARNING_FALLBACK_WIDTH;
-			view.setSize(width - insets.left - insets.right, 0);
-			int height = (int) Math.ceil(view.getPreferredSpan(View.Y_AXIS));
-			return new Dimension(width, height + insets.top + insets.bottom);
+			// The view is replaced when the text or font changes, so it doubles as a cache key.
+			if (view != measuredView || width != measuredWidth)
+			{
+				Insets insets = getInsets();
+				view.setSize(width - insets.left - insets.right, 0);
+				measuredHeight = (int) Math.ceil(view.getPreferredSpan(View.Y_AXIS)) + insets.top + insets.bottom;
+				measuredView = view;
+				measuredWidth = width;
+			}
+			return new Dimension(width, measuredHeight);
 		}
 	}
 
