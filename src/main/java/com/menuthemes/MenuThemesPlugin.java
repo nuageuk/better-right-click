@@ -1,6 +1,9 @@
 package com.menuthemes;
 
 import com.google.inject.Provides;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 import javax.inject.Inject;
 import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
@@ -20,6 +23,13 @@ public class MenuThemesPlugin extends Plugin
 	private static final String INTERFACE_STYLES_GROUP = "interfaceStyles";
 	private static final String HD_MENU_KEY = "hdMenu";
 
+	// Keys written by applyPreset(); editing any of these manually reverts the preset to Custom.
+	private static final Set<String> PRESET_KEYS = new HashSet<>(Arrays.asList(
+		MenuThemesConfig.KEY_BG, MenuThemesConfig.KEY_BORDER, MenuThemesConfig.KEY_HEADER,
+		MenuThemesConfig.KEY_HEADER_TEXT, MenuThemesConfig.KEY_TEXT, MenuThemesConfig.KEY_HOVER,
+		MenuThemesConfig.KEY_ACCENT, MenuThemesConfig.KEY_RADIUS, MenuThemesConfig.KEY_OPACITY,
+		MenuThemesConfig.KEY_HOVER_STYLE));
+
 	@Inject
 	private Client client;
 
@@ -36,6 +46,7 @@ public class MenuThemesPlugin extends Plugin
 	private ConfigManager configManager;
 
 	private boolean warnedAboutHdMenu;
+	private boolean applyingPreset;
 
 	@Override
 	protected void startUp() throws Exception
@@ -59,9 +70,16 @@ public class MenuThemesPlugin extends Plugin
 	@Subscribe
 	public void onConfigChanged(ConfigChanged event)
 	{
-		if (MenuThemesConfig.GROUP.equals(event.getGroup()) && MenuThemesConfig.KEY_THEME.equals(event.getKey()))
+		if (MenuThemesConfig.GROUP.equals(event.getGroup()))
 		{
-			applyPreset(config.theme());
+			if (MenuThemesConfig.KEY_THEME.equals(event.getKey()))
+			{
+				applyPreset(config.theme());
+			}
+			else if (!applyingPreset && PRESET_KEYS.contains(event.getKey()) && config.theme() != Preset.CUSTOM)
+			{
+				configManager.setConfiguration(MenuThemesConfig.GROUP, MenuThemesConfig.KEY_THEME, Preset.CUSTOM);
+			}
 		}
 		else if (INTERFACE_STYLES_GROUP.equals(event.getGroup()) && HD_MENU_KEY.equals(event.getKey()))
 		{
@@ -85,16 +103,24 @@ public class MenuThemesPlugin extends Plugin
 			return;
 		}
 
-		configManager.setConfiguration(MenuThemesConfig.GROUP, MenuThemesConfig.KEY_BG, preset.bg);
-		configManager.setConfiguration(MenuThemesConfig.GROUP, MenuThemesConfig.KEY_BORDER, preset.border);
-		configManager.setConfiguration(MenuThemesConfig.GROUP, MenuThemesConfig.KEY_HEADER, preset.header);
-		configManager.setConfiguration(MenuThemesConfig.GROUP, MenuThemesConfig.KEY_HEADER_TEXT, preset.headerText);
-		configManager.setConfiguration(MenuThemesConfig.GROUP, MenuThemesConfig.KEY_TEXT, preset.text);
-		configManager.setConfiguration(MenuThemesConfig.GROUP, MenuThemesConfig.KEY_HOVER, preset.hover);
-		configManager.setConfiguration(MenuThemesConfig.GROUP, MenuThemesConfig.KEY_ACCENT, preset.accent);
-		configManager.setConfiguration(MenuThemesConfig.GROUP, MenuThemesConfig.KEY_RADIUS, preset.radius);
-		configManager.setConfiguration(MenuThemesConfig.GROUP, MenuThemesConfig.KEY_OPACITY, preset.opacity);
-		configManager.setConfiguration(MenuThemesConfig.GROUP, MenuThemesConfig.KEY_HOVER_STYLE, preset.hoverStyle);
+		applyingPreset = true;
+		try
+		{
+			configManager.setConfiguration(MenuThemesConfig.GROUP, MenuThemesConfig.KEY_BG, preset.bg);
+			configManager.setConfiguration(MenuThemesConfig.GROUP, MenuThemesConfig.KEY_BORDER, preset.border);
+			configManager.setConfiguration(MenuThemesConfig.GROUP, MenuThemesConfig.KEY_HEADER, preset.header);
+			configManager.setConfiguration(MenuThemesConfig.GROUP, MenuThemesConfig.KEY_HEADER_TEXT, preset.headerText);
+			configManager.setConfiguration(MenuThemesConfig.GROUP, MenuThemesConfig.KEY_TEXT, preset.text);
+			configManager.setConfiguration(MenuThemesConfig.GROUP, MenuThemesConfig.KEY_HOVER, preset.hover);
+			configManager.setConfiguration(MenuThemesConfig.GROUP, MenuThemesConfig.KEY_ACCENT, preset.accent);
+			configManager.setConfiguration(MenuThemesConfig.GROUP, MenuThemesConfig.KEY_RADIUS, preset.radius);
+			configManager.setConfiguration(MenuThemesConfig.GROUP, MenuThemesConfig.KEY_OPACITY, preset.opacity);
+			configManager.setConfiguration(MenuThemesConfig.GROUP, MenuThemesConfig.KEY_HOVER_STYLE, preset.hoverStyle);
+		}
+		finally
+		{
+			applyingPreset = false;
+		}
 	}
 
 	@Provides

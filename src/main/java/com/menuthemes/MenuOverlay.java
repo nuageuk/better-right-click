@@ -8,6 +8,7 @@ import java.awt.Graphics2D;
 import java.awt.Rectangle;
 import java.awt.Shape;
 import java.awt.geom.RoundRectangle2D;
+import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -18,6 +19,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.inject.Inject;
 import net.runelite.api.Client;
+import net.runelite.api.IndexedSprite;
 import net.runelite.api.Menu;
 import net.runelite.api.MenuEntry;
 import net.runelite.api.Point;
@@ -30,7 +32,9 @@ import net.runelite.client.util.Text;
 
 public class MenuOverlay extends Overlay
 {
-	private static final Pattern COLOUR_TAG = Pattern.compile("<col=([0-9a-fA-F]{6})>|</col>");
+	private static final Pattern TAG = Pattern.compile("<([^>]*)>");
+	private static final Pattern COL = Pattern.compile("col=([0-9a-fA-F]{1,6})", Pattern.CASE_INSENSITIVE);
+	private static final Pattern IMG = Pattern.compile("img=(\\d+)", Pattern.CASE_INSENSITIVE);
 	private static final Pattern LEVEL = Pattern.compile("\\(level-(-?\\d+)\\)", Pattern.CASE_INSENSITIVE);
 
 	private final Client client;
@@ -43,6 +47,8 @@ public class MenuOverlay extends Overlay
 
 	private String cachedRulesRaw;
 	private Map<String, Color> cachedRules = Collections.emptyMap();
+
+	private final Map<Integer, BufferedImage> modIconCache = new HashMap<>();
 
 	@Inject
 	private MenuOverlay(Client client, MenuThemesConfig config)
@@ -158,6 +164,11 @@ public class MenuOverlay extends Overlay
 			{
 				for (Run run : parseRuns(rawOption))
 				{
+					if (run.iconIndex >= 0)
+					{
+						cursorX += drawIcon(graphics, run.iconIndex, cursorX, textY);
+						continue;
+					}
 					cursorX += drawRun(graphics, run.text, cursorX, textY,
 						run.tagColour != null ? run.tagColour : config.textColour(), shadow);
 				}
@@ -174,6 +185,11 @@ public class MenuOverlay extends Overlay
 				{
 					for (Run part : splitLevel(run))
 					{
+						if (part.iconIndex >= 0)
+						{
+							cursorX += drawIcon(graphics, part.iconIndex, cursorX, textY);
+							continue;
+						}
 						Color colour = resolveTargetColour(part, kind);
 						if (colour == null)
 						{
@@ -247,6 +263,46 @@ public class MenuOverlay extends Overlay
 		graphics.setColor(colour);
 		graphics.drawString(text, x, y);
 		return graphics.getFontMetrics().stringWidth(text);
+	}
+
+	private int drawIcon(Graphics2D graphics, int index, int x, int y)
+	{
+		BufferedImage icon = modIcon(index);
+		if (icon == null)
+		{
+			return 0;
+		}
+		int height = graphics.getFontMetrics().getAscent();
+		int width = Math.max(1, icon.getWidth() * height / icon.getHeight());
+		graphics.drawImage(icon, x, y - height, width, height, null);
+		return width + 1;
+	}
+
+	private BufferedImage modIcon(int index)
+	{
+		IndexedSprite[] icons = client.getModIcons();
+		if (index < 0 || icons == null || index >= icons.length || icons[index] == null)
+		{
+			return null;
+		}
+		return modIconCache.computeIfAbsent(index, i -> buildModIcon(icons[i]));
+	}
+
+	private static BufferedImage buildModIcon(IndexedSprite sprite)
+	{
+		int width = sprite.getWidth();
+		int height = sprite.getHeight();
+		byte[] pixels = sprite.getPixels();
+		int[] palette = sprite.getPalette();
+		int[] argb = new int[width * height];
+		for (int i = 0; i < pixels.length && i < argb.length; i++)
+		{
+			int paletteIndex = pixels[i] & 0xFF;
+			argb[i] = paletteIndex == 0 ? 0 : (0xFF000000 | palette[paletteIndex]);
+		}
+		BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+		image.setRGB(0, 0, width, height, argb, 0, width);
+		return image;
 	}
 
 	private Font resolveFont()
@@ -409,7 +465,7 @@ public class MenuOverlay extends Overlay
 		{
 			return runs;
 		}
-		Matcher matcher = COLOUR_TAG.matcher(raw);
+		Matcher matcher = TAG.matcher(raw);
 		int last = 0;
 		Color current = null;
 		while (matcher.find())
@@ -418,8 +474,24 @@ public class MenuOverlay extends Overlay
 			{
 				runs.add(new Run(raw.substring(last, matcher.start()), current));
 			}
-			current = matcher.group(1) != null ? Color.decode("#" + matcher.group(1)) : null;
 			last = matcher.end();
+
+			String inner = matcher.group(1);
+			Matcher col = COL.matcher(inner);
+			Matcher img = IMG.matcher(inner);
+			if (col.matches())
+			{
+				current = new Color(Integer.parseInt(col.group(1), 16));
+			}
+			else if (inner.equalsIgnoreCase("/col"))
+			{
+				current = null;
+			}
+			else if (img.matches())
+			{
+				runs.add(Run.icon(Integer.parseInt(img.group(1))));
+			}
+			// else: strip silently, e.g. <u>, </u>, <shad>, <br>
 		}
 		if (last < raw.length())
 		{
@@ -471,18 +543,30 @@ public class MenuOverlay extends Overlay
 		private final Color tagColour;
 		private final boolean isLevel;
 		private final int level;
+		private final int iconIndex;
 
 		private Run(String text, Color tagColour)
 		{
-			this(text, tagColour, false, 0);
+			this(text, tagColour, false, 0, -1);
 		}
 
 		private Run(String text, Color tagColour, boolean isLevel, int level)
+		{
+			this(text, tagColour, isLevel, level, -1);
+		}
+
+		private Run(String text, Color tagColour, boolean isLevel, int level, int iconIndex)
 		{
 			this.text = text;
 			this.tagColour = tagColour;
 			this.isLevel = isLevel;
 			this.level = level;
+			this.iconIndex = iconIndex;
+		}
+
+		private static Run icon(int index)
+		{
+			return new Run("", null, false, 0, index);
 		}
 	}
 }

@@ -68,11 +68,27 @@ public interface MenuThemesConfig extends Config
 	String targetsSection = "targetsSection";
 
 	@ConfigSection(
+		name = "Target colours (Custom mode)",
+		description = "Only used when Mode is Custom",
+		position = 55,
+		closedByDefault = true
+	)
+	String targetColoursSection = "targetColoursSection";
+
+	@ConfigSection(
 		name = "Combat levels",
 		description = "Colour the combat level shown in targets",
 		position = 60
 	)
 	String levelsSection = "levelsSection";
+
+	@ConfigSection(
+		name = "Level colours (Custom mode)",
+		description = "Only used when Mode is Custom",
+		position = 65,
+		closedByDefault = true
+	)
+	String levelColoursSection = "levelColoursSection";
 
 	@ConfigSection(
 		name = "Advanced",
@@ -352,9 +368,9 @@ public interface MenuThemesConfig extends Config
 	@ConfigItem(
 		keyName = "npcColour",
 		name = "NPC",
-		description = "Target colour for NPCs, when target mode is Custom",
-		position = 2,
-		section = targetsSection
+		description = "Target colour for NPCs",
+		position = 1,
+		section = targetColoursSection
 	)
 	default Color npcColour()
 	{
@@ -364,9 +380,9 @@ public interface MenuThemesConfig extends Config
 	@ConfigItem(
 		keyName = "playerColour",
 		name = "Player",
-		description = "Target colour for players, when target mode is Custom",
-		position = 3,
-		section = targetsSection
+		description = "Target colour for players",
+		position = 2,
+		section = targetColoursSection
 	)
 	default Color playerColour()
 	{
@@ -376,9 +392,9 @@ public interface MenuThemesConfig extends Config
 	@ConfigItem(
 		keyName = "itemColour",
 		name = "Item",
-		description = "Target colour for items, when target mode is Custom",
-		position = 4,
-		section = targetsSection
+		description = "Target colour for items",
+		position = 3,
+		section = targetColoursSection
 	)
 	default Color itemColour()
 	{
@@ -388,9 +404,9 @@ public interface MenuThemesConfig extends Config
 	@ConfigItem(
 		keyName = "objectColour",
 		name = "Object",
-		description = "Target colour for game objects, when target mode is Custom",
-		position = 5,
-		section = targetsSection
+		description = "Target colour for game objects",
+		position = 4,
+		section = targetColoursSection
 	)
 	default Color objectColour()
 	{
@@ -400,9 +416,9 @@ public interface MenuThemesConfig extends Config
 	@ConfigItem(
 		keyName = "otherColour",
 		name = "Other",
-		description = "Target colour for anything else, when target mode is Custom",
-		position = 6,
-		section = targetsSection
+		description = "Target colour for anything else",
+		position = 5,
+		section = targetColoursSection
 	)
 	default Color otherColour()
 	{
@@ -426,9 +442,9 @@ public interface MenuThemesConfig extends Config
 	@ConfigItem(
 		keyName = "lowerLevelColour",
 		name = "Lower level",
-		description = "Colour for a combat level lower than yours, when mode is Custom",
-		position = 2,
-		section = levelsSection
+		description = "Colour for a combat level lower than yours",
+		position = 1,
+		section = levelColoursSection
 	)
 	default Color lowerLevelColour()
 	{
@@ -438,9 +454,9 @@ public interface MenuThemesConfig extends Config
 	@ConfigItem(
 		keyName = "sameLevelColour",
 		name = "Same level",
-		description = "Colour for a combat level equal to yours, when mode is Custom",
-		position = 3,
-		section = levelsSection
+		description = "Colour for a combat level equal to yours",
+		position = 2,
+		section = levelColoursSection
 	)
 	default Color sameLevelColour()
 	{
@@ -450,9 +466,9 @@ public interface MenuThemesConfig extends Config
 	@ConfigItem(
 		keyName = "higherLevelColour",
 		name = "Higher level",
-		description = "Colour for a combat level higher than yours, when mode is Custom",
-		position = 4,
-		section = levelsSection
+		description = "Colour for a combat level higher than yours",
+		position = 3,
+		section = levelColoursSection
 	)
 	default Color higherLevelColour()
 	{
