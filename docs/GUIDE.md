@@ -116,6 +116,7 @@ You won't normally need these.
 - **Text offset X**: the space between the menu edge and the text, from 0 to 20. The same space is kept on the right.
 - **Baseline nudge**: moves the text up or down by a few pixels, from -10 to 10, if it doesn't look centred in the rows.
 - **Show hit rows**: draws an outline round each row's click area. Useful for checking the rows line up with where clicks land.
+- **Reset all settings**: puts the Action highlights, Targets, Combat levels and Advanced settings back to their defaults and switches to the Dark theme, dropping any unsaved theme changes. It asks first, and your saved themes are kept.
 
 ## Things to know
 

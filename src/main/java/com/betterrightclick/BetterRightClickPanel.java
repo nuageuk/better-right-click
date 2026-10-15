@@ -22,8 +22,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.function.BiFunction;
+import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.IntSupplier;
+import java.util.function.Supplier;
 import javax.inject.Inject;
 import javax.swing.BorderFactory;
 import javax.swing.DefaultListCellRenderer;
@@ -77,6 +80,25 @@ class BetterRightClickPanel extends PluginPanel
 	private static final int WARNING_PADDING = 6;
 	// Before the first layout there is no width yet, so assume the sidebar's usual content width.
 	private static final int WARNING_FALLBACK_WIDTH = PANEL_WIDTH - BORDER_OFFSET * 2;
+	// Everything Reset all settings restores. Themes are kept, so their keys aren't here.
+	private static final String[] GLOBAL_SETTING_KEYS = {
+		BetterRightClickConfig.KEY_HIGHLIGHTS_ENABLED,
+		BetterRightClickConfig.KEY_HIGHLIGHTS_BOLD,
+		BetterRightClickConfig.KEY_HIGHLIGHT_RULES,
+		BetterRightClickConfig.KEY_TARGET_MODE,
+		BetterRightClickConfig.KEY_NPC_COLOUR,
+		BetterRightClickConfig.KEY_PLAYER_COLOUR,
+		BetterRightClickConfig.KEY_ITEM_COLOUR,
+		BetterRightClickConfig.KEY_OBJECT_COLOUR,
+		BetterRightClickConfig.KEY_OTHER_COLOUR,
+		BetterRightClickConfig.KEY_COMBAT_LEVEL_MODE,
+		BetterRightClickConfig.KEY_LOWER_LEVEL_COLOUR,
+		BetterRightClickConfig.KEY_SAME_LEVEL_COLOUR,
+		BetterRightClickConfig.KEY_HIGHER_LEVEL_COLOUR,
+		BetterRightClickConfig.KEY_TEXT_OFFSET_X,
+		BetterRightClickConfig.KEY_BASELINE_NUDGE,
+		BetterRightClickConfig.KEY_SHOW_HIT_ROWS
+	};
 	private static final Consumer<Color> NOTHING = c ->
 	{
 	};
@@ -97,6 +119,8 @@ class BetterRightClickPanel extends PluginPanel
 
 	// Theme-bound controls; re-synced whenever the active/working theme changes.
 	private final List<Runnable> themeControlRefreshers = new ArrayList<>();
+	// Global controls; re-read from config after Reset all settings.
+	private final List<Runnable> globalControlRefreshers = new ArrayList<>();
 
 	private final JPanel rulesPanel = new JPanel();
 	private final JButton addRuleButton = new JButton("+ Add rule");
@@ -470,20 +494,15 @@ class BetterRightClickPanel extends PluginPanel
 	{
 		CollapsibleSection section = new CollapsibleSection("Action highlights", "Highlight specific menu options", false);
 
-		section.addRow(row("Enabled", globalCheckBox(config.highlightsEnabled(), BetterRightClickConfig.KEY_HIGHLIGHTS_ENABLED)));
-		section.addRow(row("Bold", globalCheckBox(config.highlightsBold(), BetterRightClickConfig.KEY_HIGHLIGHTS_BOLD)));
+		section.addRow(row("Enabled", globalCheckBox(config::highlightsEnabled, BetterRightClickConfig.KEY_HIGHLIGHTS_ENABLED)));
+		section.addRow(row("Bold", globalCheckBox(config::highlightsBold, BetterRightClickConfig.KEY_HIGHLIGHTS_BOLD)));
 
 		rulesPanel.setLayout(new DynamicGridLayout(0, 1, 0, ROW_GAP));
-		for (HighlightRules.Rule parsed : HighlightRules.parse(config.highlightRules()))
-		{
-			EditableRule rule = new EditableRule(parsed.option, parsed.colour);
-			rules.add(rule);
-			rulesPanel.add(ruleRow(rule, false));
-		}
+		loadRules();
+		globalControlRefreshers.add(this::loadRules);
 		section.addRow(rulesPanel);
 
 		addRuleButton.addActionListener(e -> addNewRule());
-		updateAddRuleEnabled();
 		section.addRow(addRuleButton);
 
 		return section;
@@ -493,13 +512,13 @@ class BetterRightClickPanel extends PluginPanel
 	{
 		CollapsibleSection section = new CollapsibleSection("Targets", "Colour menu targets by entity type", false);
 
-		ColorJButton npc = globalColourButton(config.npcColour(), "NPC colour", BetterRightClickConfig.KEY_NPC_COLOUR);
-		ColorJButton player = globalColourButton(config.playerColour(), "Player colour", BetterRightClickConfig.KEY_PLAYER_COLOUR);
-		ColorJButton item = globalColourButton(config.itemColour(), "Item colour", BetterRightClickConfig.KEY_ITEM_COLOUR);
-		ColorJButton object = globalColourButton(config.objectColour(), "Object colour", BetterRightClickConfig.KEY_OBJECT_COLOUR);
-		ColorJButton other = globalColourButton(config.otherColour(), "Other colour", BetterRightClickConfig.KEY_OTHER_COLOUR);
+		ColorJButton npc = globalColourButton(config::npcColour, "NPC colour", BetterRightClickConfig.KEY_NPC_COLOUR);
+		ColorJButton player = globalColourButton(config::playerColour, "Player colour", BetterRightClickConfig.KEY_PLAYER_COLOUR);
+		ColorJButton item = globalColourButton(config::itemColour, "Item colour", BetterRightClickConfig.KEY_ITEM_COLOUR);
+		ColorJButton object = globalColourButton(config::objectColour, "Object colour", BetterRightClickConfig.KEY_OBJECT_COLOUR);
+		ColorJButton other = globalColourButton(config::otherColour, "Other colour", BetterRightClickConfig.KEY_OTHER_COLOUR);
 
-		section.addRow(row("Mode", modeCombo(TargetMode.values(), config.targetMode(), TargetMode.CUSTOM,
+		section.addRow(row("Mode", modeCombo(TargetMode.values(), config::targetMode, TargetMode.CUSTOM,
 			BetterRightClickConfig.KEY_TARGET_MODE, npc, player, item, object, other)));
 		section.addRow(row("NPC", npc));
 		section.addRow(row("Player", player));
@@ -513,11 +532,11 @@ class BetterRightClickPanel extends PluginPanel
 	{
 		CollapsibleSection section = new CollapsibleSection("Combat levels", "Colour the combat level shown in targets", false);
 
-		ColorJButton lower = globalColourButton(config.lowerLevelColour(), "Lower level colour", BetterRightClickConfig.KEY_LOWER_LEVEL_COLOUR);
-		ColorJButton same = globalColourButton(config.sameLevelColour(), "Same level colour", BetterRightClickConfig.KEY_SAME_LEVEL_COLOUR);
-		ColorJButton higher = globalColourButton(config.higherLevelColour(), "Higher level colour", BetterRightClickConfig.KEY_HIGHER_LEVEL_COLOUR);
+		ColorJButton lower = globalColourButton(config::lowerLevelColour, "Lower level colour", BetterRightClickConfig.KEY_LOWER_LEVEL_COLOUR);
+		ColorJButton same = globalColourButton(config::sameLevelColour, "Same level colour", BetterRightClickConfig.KEY_SAME_LEVEL_COLOUR);
+		ColorJButton higher = globalColourButton(config::higherLevelColour, "Higher level colour", BetterRightClickConfig.KEY_HIGHER_LEVEL_COLOUR);
 
-		section.addRow(row("Mode", modeCombo(CombatLevelMode.values(), config.combatLevelMode(), CombatLevelMode.CUSTOM,
+		section.addRow(row("Mode", modeCombo(CombatLevelMode.values(), config::combatLevelMode, CombatLevelMode.CUSTOM,
 			BetterRightClickConfig.KEY_COMBAT_LEVEL_MODE, lower, same, higher)));
 		section.addRow(row("Lower level", lower));
 		section.addRow(row("Same level", same));
@@ -529,12 +548,16 @@ class BetterRightClickPanel extends PluginPanel
 	{
 		CollapsibleSection section = new CollapsibleSection("Advanced", "Geometry and debugging", true);
 
-		section.addRow(row("Text offset X", globalIntSpinner(Limits.textOffsetX(config),
+		section.addRow(row("Text offset X", globalIntSpinner(() -> Limits.textOffsetX(config),
 			Limits.MIN_TEXT_OFFSET_X, Limits.MAX_TEXT_OFFSET_X, BetterRightClickConfig.KEY_TEXT_OFFSET_X)));
-		section.addRow(row("Baseline nudge", globalIntSpinner(Limits.baselineNudge(config),
+		section.addRow(row("Baseline nudge", globalIntSpinner(() -> Limits.baselineNudge(config),
 			Limits.MIN_BASELINE_NUDGE, Limits.MAX_BASELINE_NUDGE, BetterRightClickConfig.KEY_BASELINE_NUDGE)));
 
-		section.addRow(row("Show hit rows", globalCheckBox(config.showHitRows(), BetterRightClickConfig.KEY_SHOW_HIT_ROWS)));
+		section.addRow(row("Show hit rows", globalCheckBox(config::showHitRows, BetterRightClickConfig.KEY_SHOW_HIT_ROWS)));
+
+		JButton reset = new JButton("Reset all settings");
+		reset.addActionListener(e -> promptResetAll());
+		section.addRow(reset);
 
 		return section;
 	}
@@ -548,28 +571,32 @@ class BetterRightClickPanel extends PluginPanel
 		preview.refresh();
 	}
 
-	private ColorJButton globalColourButton(Color initial, String title, String key)
+	private ColorJButton globalColourButton(Supplier<Color> getter, String title, String key)
 	{
-		return colourButton(initial, title, NOTHING, c -> setGlobal(key, c));
+		ColorJButton button = colourButton(getter.get(), title, NOTHING, c -> setGlobal(key, c));
+		globalControlRefreshers.add(() -> setColourButton(button, getter.get()));
+		return button;
 	}
 
-	private JCheckBox globalCheckBox(boolean selected, String key)
+	private JCheckBox globalCheckBox(BooleanSupplier getter, String key)
 	{
 		JCheckBox checkbox = new JCheckBox();
-		checkbox.setSelected(selected);
+		checkbox.setSelected(getter.getAsBoolean());
+		// setSelected doesn't fire action events, so refreshing can't write back to config.
 		checkbox.addActionListener(e -> setGlobal(key, checkbox.isSelected()));
+		globalControlRefreshers.add(() -> checkbox.setSelected(getter.getAsBoolean()));
 		return checkbox;
 	}
 
 	/**
 	 * A global mode combo whose colour buttons are only enabled in the mode that uses them.
 	 */
-	private <E extends Enum<E>> JComboBox<E> modeCombo(E[] modes, E selected, E customMode, String key,
+	private <E extends Enum<E>> JComboBox<E> modeCombo(E[] modes, Supplier<E> getter, E customMode, String key,
 		ColorJButton... colourButtons)
 	{
 		JComboBox<E> combo = new JComboBox<>(modes);
 		combo.setRenderer(new TitleCaseListCellRenderer());
-		combo.setSelectedItem(selected);
+		combo.setSelectedItem(getter.get());
 		Runnable updateEnabled = () ->
 		{
 			boolean custom = combo.getSelectedItem() == customMode;
@@ -581,19 +608,35 @@ class BetterRightClickPanel extends PluginPanel
 		updateEnabled.run();
 		combo.addActionListener(e ->
 		{
-			setGlobal(key, combo.getSelectedItem());
+			if (!refreshing)
+			{
+				setGlobal(key, combo.getSelectedItem());
+			}
 			updateEnabled.run();
 		});
+		globalControlRefreshers.add(() -> combo.setSelectedItem(getter.get()));
 		return combo;
 	}
 
-	private JSpinner globalIntSpinner(int value, int min, int max, String key)
+	private JSpinner globalIntSpinner(IntSupplier getter, int min, int max, String key)
 	{
-		JSpinner spinner = new JSpinner(new SpinnerNumberModel(value, min, max, 1));
+		JSpinner spinner = new JSpinner(new SpinnerNumberModel(getter.getAsInt(), min, max, 1));
 		spinnerFieldWidth(spinner);
 		Timer commit = new Timer(SPINNER_COMMIT_DELAY_MS, e -> setGlobal(key, spinner.getValue()));
 		commit.setRepeats(false);
-		spinner.addChangeListener(e -> commit.restart());
+		spinner.addChangeListener(e ->
+		{
+			if (!refreshing)
+			{
+				commit.restart();
+			}
+		});
+		globalControlRefreshers.add(() ->
+		{
+			// A pending edit would otherwise land after the reset and undo it.
+			commit.stop();
+			spinner.setValue(getter.getAsInt());
+		});
 		return spinner;
 	}
 
@@ -631,6 +674,21 @@ class BetterRightClickPanel extends PluginPanel
 			sb.append(rule.option.trim()).append('=').append(hex(rule.colour));
 		}
 		setGlobal(BetterRightClickConfig.KEY_HIGHLIGHT_RULES, sb.toString());
+	}
+
+	private void loadRules()
+	{
+		rules.clear();
+		rulesPanel.removeAll();
+		for (HighlightRules.Rule parsed : HighlightRules.parse(config.highlightRules()))
+		{
+			EditableRule rule = new EditableRule(parsed.option, parsed.colour);
+			rules.add(rule);
+			rulesPanel.add(ruleRow(rule, false));
+		}
+		rulesPanel.revalidate();
+		rulesPanel.repaint();
+		updateAddRuleEnabled();
 	}
 
 	private void addNewRule()
@@ -839,11 +897,50 @@ class BetterRightClickPanel extends PluginPanel
 		{
 			return true;
 		}
-		Object[] options = {"Discard", "Cancel"};
-		int result = JOptionPane.showOptionDialog(this,
-			"Discard unsaved changes to " + themeManager.active().name + "?", "Unsaved changes",
-			JOptionPane.DEFAULT_OPTION, JOptionPane.WARNING_MESSAGE, null, options, options[1]);
-		return result == 0;
+		return confirm("Discard unsaved changes to " + themeManager.active().name + "?", "Unsaved changes", "Discard");
+	}
+
+	/**
+	 * A warning dialog with {@code action} and Cancel, where Cancel has the focus.
+	 *
+	 * @return true if the user chose {@code action}
+	 */
+	private boolean confirm(String message, String title, String action)
+	{
+		Object[] options = {action, "Cancel"};
+		return JOptionPane.showOptionDialog(this, message, title, JOptionPane.DEFAULT_OPTION,
+			JOptionPane.WARNING_MESSAGE, null, options, options[1]) == 0;
+	}
+
+	/**
+	 * Restores every global setting to its default and switches to the default theme, dropping
+	 * unsaved edits. Saved themes are kept.
+	 */
+	private void promptResetAll()
+	{
+		if (!confirm("Reset all settings to default? Your saved themes are kept.", "Reset all settings", "Reset"))
+		{
+			return;
+		}
+		for (String key : GLOBAL_SETTING_KEYS)
+		{
+			configManager.unsetConfiguration(BetterRightClickConfig.GROUP, key);
+		}
+		themeManager.applyTheme(BuiltInThemes.DEFAULT_ID);
+
+		refreshing = true;
+		try
+		{
+			for (Runnable r : globalControlRefreshers)
+			{
+				r.run();
+			}
+		}
+		finally
+		{
+			refreshing = false;
+		}
+		refresh();
 	}
 
 	private void promptSaveAsNew()
