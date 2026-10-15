@@ -1,71 +1,38 @@
 # Better Right Click
 
-A RuneLite plugin that lets you fully customise the look of the right-click menu.
+A RuneLite plugin that lets you restyle the right-click menu with your own colours, fonts and themes.
 
-The vanilla menu is the same brown box for everyone, and the few existing alternatives only give you one other style to pick from. This plugin is built around customisability: every colour, font and style choice is yours, and you can save your setups and share them with other players. It only changes how the menu looks. The game still handles every entry and click exactly as before.
+| Normal menu | With Better Right Click |
+| :---: | :---: |
+| ![The normal game menu](docs/images/default.png) | ![The Glass theme in game](docs/images/glass-example.png) |
 
-![Vanilla menu](docs/vanilla.png)
-*The default RuneLite menu.*
+## Built-in themes
 
-![Dark theme](docs/dark.png)
-*One of the built-in themes.*
+| Dark | Midnight | Light | Glass | Classic |
+| :---: | :---: | :---: | :---: | :---: |
+| ![Dark](docs/images/dark.png) | ![Midnight](docs/images/midnight.png) | ![Light](docs/images/light.png) | ![Glass](docs/images/glass.png) | ![Classic](docs/images/classic.png) |
 
-![Glass theme](docs/glass.png)
-*A translucent theme with rounded corners.*
+## What you can change
 
-![Theme editor](docs/editor.png)
-*The sidebar panel used to edit themes and settings.*
+| Area | Options |
+| --- | --- |
+| Colours | Background, border, header, header text, option text, hover, accent |
+| Style | Corner radius, opacity, hover style (Fill, Bar, Outline, Text or None), border, drop shadow, header on or off |
+| Text | Font (RuneScape Regular, Small or Bold, or Sans, Serif or Mono), size, text shadow |
+| Action highlights | Colour specific actions such as Attack or Pickpocket, and make them bold |
+| Targets | Colours for NPCs, players, items, objects and everything else |
+| Combat levels | Colour them by how they compare to your level, or hide them |
+| Themes | Save, rename, duplicate, delete, and share by export and import |
 
-## Features
+Everything is set from the Better Right Click panel in the RuneLite sidebar, with a live preview as you go.
 
-### Themes
-- Built-in themes: Dark, Midnight, Light, Glass and Classic.
-- Edit any theme live and save your changes as your own theme.
-- Rename, duplicate and delete your own themes.
-- Export a theme to a string and import one from a string, so you can share themes with other players.
+## Setup
 
-### Editor
-- A sidebar panel with a live preview of the menu.
-- All settings live in one place.
+Turn off "High detail menu" in Interface Styles, as it conflicts with this plugin.
 
-### Style
-- Background, border, header, text, hover and accent colours.
-- Opacity, corner radius, border, drop shadow and header toggles.
+## Settings guide
 
-### Hover
-- Choose how the hovered row is shown: Fill, Bar, Outline, Text or None.
-
-### Text
-- RuneScape regular, small or bold, or Sans and Mono with an adjustable size.
-- Optional text shadow.
-
-### Action highlights
-- Colour specific options wherever they appear, for example Attack in red.
-- Optional bold.
-
-### Targets
-- Keep the game's own colours, or set your own for NPCs, players, items and objects.
-
-### Combat levels
-- Keep the game's own colours, set your own for lower, same and higher levels, or hide them.
-
-## Getting started
-
-Install Better Right Click from the Plugin Hub. Open its icon in the RuneLite sidebar to pick a theme and adjust settings.
-
-## Sharing themes
-
-Export copies a theme as a string to your clipboard. Import pastes a string in as a new theme.
-
-For example: open the panel, pick the theme you want, click Export, then send the string to a friend. They open their own panel, click Import, paste the string in, and the theme appears in their theme list.
-
-## Compatibility
-
-Interface Styles' HD menu option draws its own menu over this one. Turn it off and set its Menu Alpha to 255, otherwise both plugins will try to draw a menu at once.
-
-## Development
-
-Clone the repository and open it in IntelliJ with JDK 11. Run the `BetterRightClickPluginTest` configuration with `-ea` and `--developer-mode`. The run configuration is included in `.run/`.
+See the [settings guide](docs/GUIDE.md) for what every option does and how to share themes.
 
 ## License
 
