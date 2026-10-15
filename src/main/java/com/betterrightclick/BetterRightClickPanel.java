@@ -403,7 +403,7 @@ class BetterRightClickPanel extends PluginPanel
 		section.addRow(row("Font", fontCombo));
 
 		fontSizeSpinner = themeIntSpinner(t -> t.fontSize, Theme::withFontSize, Limits.MIN_FONT_SIZE, Limits.MAX_FONT_SIZE);
-		section.addRow(row("Font size", "Applies to the Sans, Serif and Mono fonts only", fontSizeSpinner));
+		section.addRow(row("Font size", "Applies to the Sans and Serif fonts only", fontSizeSpinner));
 
 		section.addRow(row("Text shadow", themeCheckBox(t -> t.textShadow, Theme::withTextShadow)));
 

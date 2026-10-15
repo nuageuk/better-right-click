@@ -70,8 +70,8 @@ Click a colour to change it.
 
 ![Text](images/text.png)
 
-- **Font**: Regular, Small and Bold are RuneScape's own fonts. Sans, Serif and Mono are standard fonts.
-- **Font size**: from 11 to 13. Only Sans, Serif and Mono can be resized, so this is greyed out for the RuneScape fonts.
+- **Font**: Regular, Small and Bold are RuneScape's own fonts. Sans and Serif are standard fonts. With Sans and Serif, extra spaces in menu text are shown as a single space.
+- **Font size**: from 11 to 13. Only Sans and Serif can be resized, so this is greyed out for the RuneScape fonts.
 - **Text shadow**: draws a dark shadow behind the text, like the game does.
 
 ## Action highlights

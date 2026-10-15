@@ -18,7 +18,7 @@ A RuneLite plugin that lets you restyle the right-click menu with your own colou
 | --- | --- |
 | Colours | Background, border, header, header text, option text, hover, accent |
 | Style | Corner radius, opacity, hover style (Fill, Bar, Outline, Text or None), border, drop shadow, header on or off |
-| Text | Font (RuneScape Regular, Small or Bold, or Sans, Serif or Mono), size, text shadow |
+| Text | Font (RuneScape Regular, Small or Bold, or Sans or Serif), size, text shadow |
 | Action highlights | Colour specific actions such as Attack or Pickpocket, and make them bold |
 | Targets | Colours for NPCs, players, items, objects and everything else |
 | Combat levels | Colour them by how they compare to your level, or hide them |

@@ -12,8 +12,7 @@ enum FontChoice
 	RS_SMALL("Small", null),
 	RS_BOLD("Bold", null),
 	SANS("Sans", Font.SANS_SERIF),
-	SERIF("Serif", Font.SERIF),
-	MONO("Mono", Font.MONOSPACED);
+	SERIF("Serif", Font.SERIF);
 
 	private final String label;
 	// AWT logical family for the scalable fonts; null for RuneScape's fixed-size bitmap fonts.

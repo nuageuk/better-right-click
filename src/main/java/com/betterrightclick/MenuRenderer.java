@@ -41,6 +41,7 @@ final class MenuRenderer
 	private static final Pattern LEVEL = Pattern.compile("\\(level-(-?\\d{1,4})\\)", Pattern.CASE_INSENSITIVE);
 	// Whitespace followed only by tags/whitespace up to the end, i.e. visually trailing.
 	private static final Pattern TRAILING_SPACE = Pattern.compile("\\s+(?=(?:<[^<>]*>|\\s)*$)");
+	private static final Pattern WHITESPACE_RUN = Pattern.compile("\\s+");
 	private static final String CLOSE_COL = "/col";
 
 	// The game's own menu geometry. Its click rows use these, so ours must too.
@@ -79,6 +80,10 @@ final class MenuRenderer
 
 	// Derived from the theme, rebuilt only when it changes.
 	private Theme theme;
+	// The game pads some text with extra spaces that only line up in its own fonts, so the standard
+	// fonts show each run of spaces as one. Parsed text depends on this, so the caches are cleared
+	// when it flips.
+	private boolean collapseSpaces;
 	private Font font;
 	private Font boldFont;
 	private Color bgColour;
@@ -153,6 +158,13 @@ final class MenuRenderer
 		boolean themeChanged = theme != this.theme;
 		if (themeChanged)
 		{
+			if (theme.font.isScalable() != collapseSpaces)
+			{
+				collapseSpaces = !collapseSpaces;
+				optionCache.clear();
+				targetCache.clear();
+				strippedTargetCache.clear();
+			}
 			this.theme = theme;
 			font = buildFont(theme.font, theme.fontSize);
 			boldFont = buildBoldFont(theme.font, theme.fontSize);
@@ -508,7 +520,8 @@ final class MenuRenderer
 		if (segments == null)
 		{
 			String plain = Text.removeTags(key);
-			segments = new OptionSegments(parseRuns(key), plain, plain.toLowerCase(Locale.ROOT).trim());
+			// Rules match the option as the game spells it, so only the displayed text is collapsed.
+			segments = new OptionSegments(parseRuns(key), collapse(plain), plain.toLowerCase(Locale.ROOT).trim());
 			optionCache.put(key, segments);
 		}
 		return segments;
@@ -553,7 +566,7 @@ final class MenuRenderer
 	 * Splits on {@code <col=..>}, {@code </col>} and {@code <img=N>} tags. Every other tag (and any
 	 * unparseable one) is stripped, so unknown markup never shows up as literal text.
 	 */
-	private static List<Run> parseRuns(String raw)
+	private List<Run> parseRuns(String raw)
 	{
 		List<Run> runs = new ArrayList<>();
 		Matcher matcher = TAG.matcher(raw);
@@ -563,7 +576,7 @@ final class MenuRenderer
 		{
 			if (matcher.start() > last)
 			{
-				runs.add(new Run(raw.substring(last, matcher.start()), current));
+				runs.add(new Run(collapse(raw.substring(last, matcher.start())), current));
 			}
 			last = matcher.end();
 
@@ -585,9 +598,14 @@ final class MenuRenderer
 		}
 		if (last < raw.length())
 		{
-			runs.add(new Run(raw.substring(last), current));
+			runs.add(new Run(collapse(raw.substring(last)), current));
 		}
 		return runs;
+	}
+
+	private String collapse(String text)
+	{
+		return collapseSpaces ? WHITESPACE_RUN.matcher(text).replaceAll(" ") : text;
 	}
 
 	private static void splitLevel(Run run, List<Run> out)
