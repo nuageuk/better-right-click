@@ -38,6 +38,8 @@ final class MenuRenderer
 	private static final Pattern COL = Pattern.compile("col=([0-9a-fA-F]{1,6})", Pattern.CASE_INSENSITIVE);
 	private static final Pattern IMG = Pattern.compile("img=(\\d{1,4})", Pattern.CASE_INSENSITIVE);
 	private static final Pattern LEVEL = Pattern.compile("\\(level-(-?\\d{1,4})\\)", Pattern.CASE_INSENSITIVE);
+	// Whitespace followed only by tags/whitespace up to the end, i.e. visually trailing.
+	private static final Pattern TRAILING_SPACE = Pattern.compile("\\s+(?=(?:<[^<>]*>|\\s)*$)");
 	private static final String CLOSE_COL = "/col";
 
 	private static final String HEADER_TEXT = "Choose Option";
@@ -211,11 +213,8 @@ final class MenuRenderer
 				cursorX += drawIcon(graphics, metrics, client, run.iconIndex, cursorX, textY);
 				continue;
 			}
-			Color colour = targetColours.resolve(run, row.kind);
-			if (colour != null)
-			{
-				cursorX += drawRun(graphics, metrics, run.text, cursorX, textY, colour, theme.textShadow);
-			}
+			cursorX += drawRun(graphics, metrics, run.text, cursorX, textY, targetColours.resolve(run, row.kind),
+				theme.textShadow);
 		}
 	}
 
@@ -453,6 +452,10 @@ final class MenuRenderer
 	private List<Run> targetRuns(String raw)
 	{
 		String key = clean(raw);
+		if (targetColours.levelMode == CombatLevelMode.HIDE)
+		{
+			key = stripLevel(key);
+		}
 		List<Run> runs = targetCache.get(key);
 		if (runs == null)
 		{
@@ -469,6 +472,20 @@ final class MenuRenderer
 	private static String clean(String raw)
 	{
 		return raw == null ? "" : Limits.truncate(raw, MAX_ENTRY_LENGTH);
+	}
+
+	/**
+	 * Removes any {@code (level-N)} segment and the whitespace it leaves trailing the name.
+	 * Returns {@code target} itself when there is nothing to strip.
+	 */
+	static String stripLevel(String target)
+	{
+		Matcher matcher = LEVEL.matcher(target);
+		if (!matcher.find())
+		{
+			return target;
+		}
+		return TRAILING_SPACE.matcher(matcher.replaceAll("")).replaceAll("");
 	}
 
 	/**
@@ -620,18 +637,11 @@ final class MenuRenderer
 			higher = config.higherLevelColour();
 		}
 
-		/**
-		 * @return null if the run should not be drawn
-		 */
 		private Color resolve(Run run, TargetKind kind)
 		{
 			Color tagColour = run.tagColour != null ? run.tagColour : DEFAULT_TAG_COLOUR;
 			if (run.isLevel)
 			{
-				if (levelMode == CombatLevelMode.HIDE)
-				{
-					return null;
-				}
 				if (levelMode == CombatLevelMode.CUSTOM)
 				{
 					return orDefault(run.level < localLevel ? lower : run.level > localLevel ? higher : same, tagColour);

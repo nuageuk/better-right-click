@@ -9,9 +9,11 @@ import javax.inject.Inject;
 import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
+import net.runelite.api.MenuEntry;
 import net.runelite.api.Player;
 import net.runelite.api.events.BeforeMenuRender;
 import net.runelite.api.events.GameStateChanged;
+import net.runelite.api.events.MenuEntryAdded;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.events.ConfigChanged;
@@ -56,6 +58,9 @@ public class BetterRightClickPlugin extends Plugin
 
 	@Inject
 	private ConfigManager configManager;
+
+	@Inject
+	private BetterRightClickConfig config;
 
 	@Inject
 	private ClientToolbar clientToolbar;
@@ -114,6 +119,30 @@ public class BetterRightClickPlugin extends Plugin
 		if (menuOverlay.shouldDraw())
 		{
 			event.consume();
+		}
+	}
+
+	/**
+	 * The menu box is sized by the client from the entry targets, so a hidden level has to be stripped
+	 * from the entry itself, not just left undrawn, or its width is still reserved.
+	 */
+	@Subscribe
+	public void onMenuEntryAdded(MenuEntryAdded event)
+	{
+		if (config.combatLevelMode() != CombatLevelMode.HIDE)
+		{
+			return;
+		}
+		MenuEntry entry = event.getMenuEntry();
+		String target = entry.getTarget();
+		if (target == null)
+		{
+			return;
+		}
+		String stripped = MenuRenderer.stripLevel(target);
+		if (stripped != target)
+		{
+			entry.setTarget(stripped);
 		}
 	}
 
