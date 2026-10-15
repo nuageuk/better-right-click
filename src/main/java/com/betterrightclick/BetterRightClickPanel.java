@@ -210,6 +210,10 @@ class BetterRightClickPanel extends PluginPanel
 		JMenuItem duplicateItem = new JMenuItem("Duplicate");
 		duplicateItem.addActionListener(e ->
 		{
+			if (!confirmDiscardEdits())
+			{
+				return;
+			}
 			if (!themeManager.duplicate())
 			{
 				showThemesFull();
