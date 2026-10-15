@@ -50,6 +50,8 @@ public class MenuOverlay extends Overlay
 
 	private final Map<Integer, BufferedImage> modIconCache = new HashMap<>();
 
+	private Theme cachedTheme;
+
 	@Inject
 	private MenuOverlay(Client client, MenuThemesConfig config)
 	{
@@ -57,6 +59,20 @@ public class MenuOverlay extends Overlay
 		this.config = config;
 		setLayer(OverlayLayer.ALWAYS_ON_TOP);
 		setPosition(OverlayPosition.DYNAMIC);
+	}
+
+	void invalidateTheme()
+	{
+		cachedTheme = null;
+	}
+
+	private Theme resolveTheme()
+	{
+		if (cachedTheme == null)
+		{
+			cachedTheme = Theme.of(config);
+		}
+		return cachedTheme;
 	}
 
 	@Override
@@ -73,16 +89,18 @@ public class MenuOverlay extends Overlay
 		int width = menu.getMenuWidth();
 		int height = menu.getMenuHeight();
 
+		Theme theme = resolveTheme();
+
 		boolean headerOn = config.headerEnabled();
 		int headerHeight = headerOn ? config.headerHeight() : 0;
 		int rowHeight = config.rowHeight();
 		int textOffsetX = config.textOffsetX();
 		int baselineNudge = config.baselineNudge();
-		int radius = config.cornerRadius();
-		int alpha = (int) Math.round(config.opacity() * 255 / 100.0);
+		int radius = theme.radius;
+		int alpha = (int) Math.round(theme.opacity * 255 / 100.0);
 		boolean shadow = config.textShadow();
-		Color accent = config.accentColour();
-		HoverStyle hoverStyle = config.hoverStyle();
+		Color accent = theme.accent;
+		HoverStyle hoverStyle = theme.hoverStyle;
 
 		Font font = resolveFont();
 		graphics.setFont(font);
@@ -106,7 +124,7 @@ public class MenuOverlay extends Overlay
 			}
 		}
 
-		graphics.setColor(ColorUtil.colorWithAlpha(config.bgColour(), alpha));
+		graphics.setColor(ColorUtil.colorWithAlpha(theme.bg, alpha));
 		graphics.fill(menuShape);
 
 		Shape previousClip = graphics.getClip();
@@ -114,10 +132,10 @@ public class MenuOverlay extends Overlay
 
 		if (headerOn)
 		{
-			graphics.setColor(ColorUtil.colorWithAlpha(config.headerColour(), alpha));
+			graphics.setColor(ColorUtil.colorWithAlpha(theme.header, alpha));
 			graphics.fillRect(x, y, width, headerHeight);
 			graphics.setFont(font);
-			drawRun(graphics, "Choose Option", x + textOffsetX, headerTextY, config.headerTextColour(), shadow);
+			drawRun(graphics, "Choose Option", x + textOffsetX, headerTextY, theme.headerText, shadow);
 		}
 
 		MenuEntry[] entries = menu.getMenuEntries();
@@ -134,7 +152,7 @@ public class MenuOverlay extends Overlay
 
 			if (hovered && hoverStyle != HoverStyle.NONE)
 			{
-				applyHover(graphics, hoverStyle, x, rowY, width, rowHeight, config.hoverColour(), accent, alpha);
+				applyHover(graphics, hoverStyle, x, rowY, width, rowHeight, theme.hover, accent, alpha);
 			}
 
 			if (config.showHitRows())
@@ -170,7 +188,7 @@ public class MenuOverlay extends Overlay
 						continue;
 					}
 					cursorX += drawRun(graphics, run.text, cursorX, textY,
-						run.tagColour != null ? run.tagColour : config.textColour(), shadow);
+						run.tagColour != null ? run.tagColour : theme.text, shadow);
 				}
 			}
 
@@ -205,7 +223,7 @@ public class MenuOverlay extends Overlay
 
 		if (config.borderEnabled())
 		{
-			graphics.setColor(config.borderColour());
+			graphics.setColor(theme.border);
 			if (radius > 0)
 			{
 				graphics.draw(new RoundRectangle2D.Float(x, y, width - 1, height - 1, radius, radius));

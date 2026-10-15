@@ -12,8 +12,9 @@ public interface MenuThemesConfig extends Config
 {
 	String GROUP = "menuthemes";
 
-	// Keys written by applyPreset() in MenuThemesPlugin; kept as constants to avoid typos.
+	// Keys written by copyPresetToCustom() in MenuThemesPlugin; kept as constants to avoid typos.
 	String KEY_THEME = "theme";
+	String KEY_COPY_TO_CUSTOM = "copyPresetToCustom";
 	String KEY_BG = "bgColour";
 	String KEY_BORDER = "borderColour";
 	String KEY_HEADER = "headerColour";
@@ -40,18 +41,12 @@ public interface MenuThemesConfig extends Config
 	String textSection = "textSection";
 
 	@ConfigSection(
-		name = "Colours",
-		description = "Individual colours used to draw the menu. A preset above overwrites these",
-		position = 20
+		name = "Custom theme (Custom preset)",
+		description = "Only used when Preset is Custom",
+		position = 20,
+		closedByDefault = true
 	)
 	String coloursSection = "coloursSection";
-
-	@ConfigSection(
-		name = "Hover",
-		description = "Hover highlight style",
-		position = 30
-	)
-	String hoverSection = "hoverSection";
 
 	@ConfigSection(
 		name = "Action highlights",
@@ -103,7 +98,7 @@ public interface MenuThemesConfig extends Config
 	@ConfigItem(
 		keyName = KEY_THEME,
 		name = "Preset",
-		description = "Applies a bundled theme. Choose Custom to keep your own colours",
+		description = "Selects a bundled theme to render. Choose Custom to use the keys below",
 		position = 1,
 		section = themeSection
 	)
@@ -112,37 +107,23 @@ public interface MenuThemesConfig extends Config
 		return Preset.DARK;
 	}
 
-	@Range(min = 40, max = 100)
 	@ConfigItem(
-		keyName = KEY_OPACITY,
-		name = "Opacity",
-		description = "Opacity of the background, header and hover fills",
+		keyName = KEY_COPY_TO_CUSTOM,
+		name = "Copy preset to Custom",
+		description = "Copies the selected preset's values into the Custom theme keys below, then switches to Custom",
 		position = 2,
 		section = themeSection
 	)
-	default int opacity()
+	default boolean copyPresetToCustom()
 	{
-		return 96;
-	}
-
-	@Range(min = 0, max = 8)
-	@ConfigItem(
-		keyName = KEY_RADIUS,
-		name = "Corner radius",
-		description = "Corner radius of the menu",
-		position = 3,
-		section = themeSection
-	)
-	default int cornerRadius()
-	{
-		return 6;
+		return false;
 	}
 
 	@ConfigItem(
 		keyName = "borderEnabled",
 		name = "Border",
 		description = "Draw a border around the menu",
-		position = 4,
+		position = 3,
 		section = themeSection
 	)
 	default boolean borderEnabled()
@@ -154,7 +135,7 @@ public interface MenuThemesConfig extends Config
 		keyName = "dropShadowEnabled",
 		name = "Drop shadow",
 		description = "Draw a soft drop shadow behind the menu",
-		position = 5,
+		position = 4,
 		section = themeSection
 	)
 	default boolean dropShadowEnabled()
@@ -166,7 +147,7 @@ public interface MenuThemesConfig extends Config
 		keyName = "headerEnabled",
 		name = "Header",
 		description = "Show the \"Choose Option\" header",
-		position = 6,
+		position = 5,
 		section = themeSection
 	)
 	default boolean headerEnabled()
@@ -299,14 +280,38 @@ public interface MenuThemesConfig extends Config
 		return new Color(0x4C8DF6);
 	}
 
-	// --- Hover ---
+	@Range(min = 0, max = 8)
+	@ConfigItem(
+		keyName = KEY_RADIUS,
+		name = "Corner radius",
+		description = "Corner radius of the menu",
+		position = 8,
+		section = coloursSection
+	)
+	default int cornerRadius()
+	{
+		return 6;
+	}
+
+	@Range(min = 40, max = 100)
+	@ConfigItem(
+		keyName = KEY_OPACITY,
+		name = "Opacity",
+		description = "Opacity of the background, header and hover fills",
+		position = 9,
+		section = coloursSection
+	)
+	default int opacity()
+	{
+		return 96;
+	}
 
 	@ConfigItem(
 		keyName = KEY_HOVER_STYLE,
 		name = "Hover style",
 		description = "How the hovered menu entry is highlighted",
-		position = 1,
-		section = hoverSection
+		position = 10,
+		section = coloursSection
 	)
 	default HoverStyle hoverStyle()
 	{
