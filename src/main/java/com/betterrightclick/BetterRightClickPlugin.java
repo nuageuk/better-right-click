@@ -1,10 +1,6 @@
 package com.betterrightclick;
 
 import com.google.inject.Provides;
-import java.awt.Color;
-import java.awt.Graphics2D;
-import java.awt.RenderingHints;
-import java.awt.image.BufferedImage;
 import javax.inject.Inject;
 import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
@@ -21,6 +17,7 @@ import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.ClientToolbar;
 import net.runelite.client.ui.NavigationButton;
 import net.runelite.client.ui.overlay.OverlayManager;
+import net.runelite.client.util.ImageUtil;
 
 @PluginDescriptor(
 	name = "Better Right Click"
@@ -32,15 +29,6 @@ public class BetterRightClickPlugin extends Plugin
 	private static final String HD_MENU_KEY = "hdMenu";
 	private static final String HD_MENU_WARNING = NAME + ": turn off Interface Styles' HD menu for best results.";
 	private static final int NAV_PRIORITY = 5;
-
-	private static final int ICON_SIZE = 16;
-	private static final int ICON_ARC = 3;
-	private static final int ICON_BAR_X = 3;
-	private static final int ICON_BAR_WIDTH = 10;
-	private static final int ICON_BAR_HEIGHT = 2;
-	private static final int[] ICON_BAR_YS = {4, 7, 10};
-	private static final Color ICON_BACKGROUND = new Color(0x2C313A);
-	private static final Color ICON_FOREGROUND = new Color(0x4C8DF6);
 
 	@Inject
 	private Client client;
@@ -80,7 +68,7 @@ public class BetterRightClickPlugin extends Plugin
 		panel = getInjector().getInstance(BetterRightClickPanel.class);
 		navigationButton = NavigationButton.builder()
 			.tooltip(NAME)
-			.icon(createIcon())
+			.icon(ImageUtil.loadImageResource(BetterRightClickPlugin.class, "panel_icon.png"))
 			.priority(NAV_PRIORITY)
 			.panel(panel)
 			.build();
@@ -176,21 +164,5 @@ public class BetterRightClickPlugin extends Plugin
 			clientThread.invokeLater(() ->
 				client.addChatMessage(ChatMessageType.GAMEMESSAGE, "", HD_MENU_WARNING, null));
 		}
-	}
-
-	private static BufferedImage createIcon()
-	{
-		BufferedImage icon = new BufferedImage(ICON_SIZE, ICON_SIZE, BufferedImage.TYPE_INT_ARGB);
-		Graphics2D g = icon.createGraphics();
-		g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-		g.setColor(ICON_BACKGROUND);
-		g.fillRoundRect(0, 0, ICON_SIZE, ICON_SIZE, ICON_ARC, ICON_ARC);
-		g.setColor(ICON_FOREGROUND);
-		for (int y : ICON_BAR_YS)
-		{
-			g.fillRect(ICON_BAR_X, y, ICON_BAR_WIDTH, ICON_BAR_HEIGHT);
-		}
-		g.dispose();
-		return icon;
 	}
 }
