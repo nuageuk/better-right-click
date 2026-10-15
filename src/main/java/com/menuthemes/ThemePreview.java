@@ -18,7 +18,7 @@ import net.runelite.client.ui.ColorScheme;
 class ThemePreview extends JPanel
 {
 	private static final int TOP_MARGIN = 10;
-	private static final int SIDE_MARGIN = 10;
+	private static final int SIDE_MARGIN = 8;
 
 	private static final List<MenuRenderer.Row> SAMPLE_ROWS = Arrays.asList(
 		new MenuRenderer.Row("Attack", "<col=ffff00>Guard</col> <col=ffffff>(level-21)</col>", MenuRenderer.TargetKind.NPC),

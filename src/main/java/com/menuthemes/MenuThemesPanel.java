@@ -4,6 +4,7 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.GridLayout;
+import java.awt.Insets;
 import java.awt.Toolkit;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.DataFlavor;
@@ -21,11 +22,13 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import javax.inject.Inject;
 import javax.swing.BorderFactory;
+import javax.swing.DefaultListCellRenderer;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
+import javax.swing.JList;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
@@ -33,13 +36,12 @@ import javax.swing.JPopupMenu;
 import javax.swing.JSpinner;
 import javax.swing.JTextField;
 import javax.swing.SpinnerNumberModel;
-import javax.swing.border.EmptyBorder;
 import javax.swing.event.PopupMenuEvent;
 import javax.swing.event.PopupMenuListener;
 import net.runelite.api.Client;
 import net.runelite.client.config.ConfigManager;
-import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.DynamicGridLayout;
+import net.runelite.client.ui.FontManager;
 import net.runelite.client.ui.PluginPanel;
 import net.runelite.client.ui.components.ColorJButton;
 import net.runelite.client.ui.components.TitleCaseListCellRenderer;
@@ -105,14 +107,14 @@ class MenuThemesPanel extends PluginPanel
 		JPanel container = new JPanel();
 		container.setLayout(new DynamicGridLayout(0, 1, 0, 4));
 
-		themeCombo.setRenderer((list, theme, index, isSelected, hasFocus) ->
+		themeCombo.setRenderer(new DefaultListCellRenderer()
 		{
-			JLabel label = new JLabel(themeLabel(theme));
-			label.setOpaque(true);
-			label.setBorder(new EmptyBorder(4, 4, 4, 4));
-			label.setBackground(isSelected ? ColorScheme.DARK_GRAY_HOVER_COLOR : ColorScheme.DARKER_GRAY_COLOR);
-			label.setForeground(Color.WHITE);
-			return label;
+			@Override
+			public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus)
+			{
+				String text = value == null ? "" : themeLabel((Theme) value);
+				return super.getListCellRendererComponent(list, text, index, isSelected, cellHasFocus);
+			}
 		});
 		themeCombo.addActionListener(e ->
 		{
@@ -129,34 +131,41 @@ class MenuThemesPanel extends PluginPanel
 		});
 		container.add(themeCombo);
 
-		JPanel buttons = new JPanel(new GridLayout(1, 4, 4, 0));
+		JPanel buttons = new JPanel(new GridLayout(2, 2, 4, 4));
 		saveButton.addActionListener(e ->
 		{
 			themeManager.save();
 			refresh();
 		});
-		buttons.add(saveButton);
+		buttons.add(compact(saveButton));
 
 		JButton saveAsButton = new JButton("Save as…");
 		saveAsButton.addActionListener(e -> promptSaveAsNew());
-		buttons.add(saveAsButton);
+		buttons.add(compact(saveAsButton));
 
 		revertButton.addActionListener(e ->
 		{
 			themeManager.revert();
 			refresh();
 		});
-		buttons.add(revertButton);
+		buttons.add(compact(revertButton));
 
-		buttons.add(buildMoreButton());
+		buttons.add(compact(buildMoreButton()));
 		container.add(buttons);
 
 		return container;
 	}
 
+	private static JButton compact(JButton button)
+	{
+		button.setFont(FontManager.getRunescapeSmallFont());
+		button.setMargin(new Insets(2, 2, 2, 2));
+		return button;
+	}
+
 	private JButton buildMoreButton()
 	{
-		JButton button = new JButton("⋯");
+		JButton button = new JButton("More ▾");
 		button.setToolTipText("More theme actions");
 
 		JPopupMenu menu = new JPopupMenu();
@@ -275,7 +284,7 @@ class MenuThemesPanel extends PluginPanel
 		section.addRow(row("Font", fontCombo));
 
 		fontSizeSpinner = themeIntSpinner(t -> t.fontSize, Theme::withFontSize, 11, 13);
-		section.addRow(row("Font size (Sans/Mono only)", fontSizeSpinner));
+		section.addRow(row("Font size", "Applies to the Sans and Mono fonts only", fontSizeSpinner));
 
 		section.addRow(row("Text shadow", themeCheckBox(t -> t.textShadow, Theme::withTextShadow)));
 
@@ -564,6 +573,7 @@ class MenuThemesPanel extends PluginPanel
 
 		JButton remove = new JButton("✕");
 		remove.setToolTipText("Remove rule");
+		remove.setMargin(new Insets(2, 6, 2, 6));
 		remove.addActionListener(e ->
 		{
 			List<Rule> current = parseRules();
@@ -625,9 +635,17 @@ class MenuThemesPanel extends PluginPanel
 
 	private static JPanel row(String label, JComponent control)
 	{
+		return row(label, null, control);
+	}
+
+	private static JPanel row(String label, String tooltip, JComponent control)
+	{
 		JPanel panel = new JPanel(new BorderLayout());
 		JLabel text = new JLabel(label);
-		text.setForeground(Color.WHITE);
+		if (tooltip != null)
+		{
+			text.setToolTipText(tooltip);
+		}
 		panel.add(text, BorderLayout.CENTER);
 		panel.add(control, BorderLayout.EAST);
 		return panel;

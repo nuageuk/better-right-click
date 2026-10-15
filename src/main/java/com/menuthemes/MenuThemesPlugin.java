@@ -41,7 +41,11 @@ public class MenuThemesPlugin extends Plugin
 	@Inject
 	private ClientToolbar clientToolbar;
 
-	@Inject
+	// Built in startUp(), not injected as a field: RuneLite's look-and-feel (RuneLiteLAF) is only
+	// installed by ClientUI.init(), which runs after plugins are loaded but before startUp() is
+	// called. A Swing-holding field would be constructed during the load phase - before the LAF is
+	// set - and would keep the default (light) Swing styling forever, since Swing never retroactively
+	// re-skins an existing component tree when the LAF changes later.
 	private MenuThemesPanel panel;
 
 	private NavigationButton navigationButton;
@@ -52,6 +56,7 @@ public class MenuThemesPlugin extends Plugin
 	{
 		overlayManager.add(menuOverlay);
 
+		panel = getInjector().getInstance(MenuThemesPanel.class);
 		navigationButton = NavigationButton.builder()
 			.tooltip("Menu Themes")
 			.icon(createIcon())
@@ -68,6 +73,7 @@ public class MenuThemesPlugin extends Plugin
 	{
 		overlayManager.remove(menuOverlay);
 		clientToolbar.removeNavigation(navigationButton);
+		panel = null;
 	}
 
 	@Subscribe
