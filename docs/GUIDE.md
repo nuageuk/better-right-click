@@ -120,10 +120,17 @@ You won't normally need these.
 - **Show hit rows**: draws an outline round each row's click area. Useful for checking the rows line up with where clicks land.
 - **Reset all settings**: puts the Action highlights, Targets, Combat levels and Advanced settings back to their defaults and switches to the Classic theme, dropping any unsaved theme changes. It asks first, and your saved themes are kept.
 
+## RuneLite plugin settings
+
+![Better Right Click plugin settings](images/pluginhubsettings.png)
+
+*Sidebar visibility and reset controls.*
+
+You can hide the sidebar button with **Show sidebar button**. If you hide it, open Better Right Click in RuneLite's normal plugin configuration to show it again. Use **Reset** for the reset described above, which restores default settings and Classic while preserving saved custom themes.
+
 ## Things to know
 
 - **Interface Styles' "High detail menu" and "Menu alpha" settings can conflict with this plugin.** While Interface Styles is on with High detail menu enabled or Menu alpha set below 255, the panel shows a warning at the top, and you get a chat message once after logging in. Turn off High detail menu and set Menu alpha to 255, or turn off Interface Styles, for themes to work.
-- You can hide the sidebar button with **Show sidebar button** in the plugin's settings in the RuneLite configuration panel. Turn it back on to get the panel back.
 - The plugin only changes how the menu looks. The game still decides what is in the menu and what each click does.
 - The custom menu uses the game's native width and row positions. The plugin does not change the game's click regions.
 - Scrollable menus and menus that contain a submenu are drawn by the game as normal. Interface Styles' condensed player options therefore keep their normal submenu appearance.
