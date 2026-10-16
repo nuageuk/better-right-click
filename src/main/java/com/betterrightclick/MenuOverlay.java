@@ -53,8 +53,9 @@ class MenuOverlay extends Overlay
 	}
 
 	/**
-	 * Whether we should replace the vanilla menu right now. Submenus are left to vanilla: the API
-	 * exposes no way to tell whether a submenu is open, so any menu containing one is drawn natively.
+	 * Whether we should replace the vanilla menu right now. Scrollable menus are left to vanilla.
+	 * Submenus are too: the API exposes no way to tell whether a submenu is open, so any menu
+	 * containing one is drawn natively.
 	 */
 	boolean shouldDraw()
 	{
@@ -67,7 +68,7 @@ class MenuOverlay extends Overlay
 	 */
 	private MenuEntry[] drawableEntries()
 	{
-		if (failed || !client.isMenuOpen())
+		if (failed || !client.isMenuOpen() || client.isMenuScrollable())
 		{
 			return null;
 		}
