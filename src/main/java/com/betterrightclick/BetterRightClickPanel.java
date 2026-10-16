@@ -1003,11 +1003,7 @@ class BetterRightClickPanel extends PluginPanel
 
 	private void exportActive()
 	{
-		String payload = themeManager.export(themeManager.activeId());
-		if (payload == null)
-		{
-			return;
-		}
+		String payload = themeManager.exportWorking();
 		try
 		{
 			Toolkit.getDefaultToolkit().getSystemClipboard().setContents(new StringSelection(payload), null);

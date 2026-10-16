@@ -169,13 +169,12 @@ class ThemeManager
 		}
 	}
 
-	String export(String id)
+	/**
+	 * Exports the live working copy so sidebar edits are included without saving them.
+	 */
+	String exportWorking()
 	{
-		Theme theme = find(id);
-		if (theme == null)
-		{
-			return null;
-		}
+		Theme theme = working;
 		String json = gson.toJson(StoredTheme.from(theme));
 		return EXPORT_PREFIX + Base64.getEncoder().encodeToString(json.getBytes(StandardCharsets.UTF_8));
 	}
