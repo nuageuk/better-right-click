@@ -129,6 +129,7 @@ class BetterRightClickPanel extends PluginPanel
 
 	private JSpinner fontSizeSpinner;
 	private boolean refreshing;
+	private long profileRevision;
 
 	@Inject
 	BetterRightClickPanel(LocalPlayerSnapshot localPlayer, ThemeManager themeManager, BetterRightClickConfig config,
@@ -183,6 +184,7 @@ class BetterRightClickPanel extends PluginPanel
 	 */
 	void reloadFromConfig()
 	{
+		profileRevision++;
 		refreshing = true;
 		try
 		{
@@ -817,13 +819,24 @@ class BetterRightClickPanel extends PluginPanel
 					return;
 				}
 				RuneliteColorPicker picker = colorPickerManager.create(button, button.getColor(), title, true);
+				long openedProfileRevision = profileRevision;
 				picker.setLocationRelativeTo(button);
 				picker.setOnColorChange(c ->
 				{
+					if (openedProfileRevision != profileRevision)
+					{
+						return;
+					}
 					setColourButton(button, c);
 					onChange.accept(c);
 				});
-				picker.setOnClose(onCommit);
+				picker.setOnClose(c ->
+				{
+					if (openedProfileRevision == profileRevision)
+					{
+						onCommit.accept(c);
+					}
+				});
 				picker.setVisible(true);
 			}
 		});
