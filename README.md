@@ -19,28 +19,32 @@ Classic is the default theme, using the RuneScape Bold font.
 | Area | Options |
 | --- | --- |
 | Colours | Background, border, header, header text, option text, hover, accent |
-| Style | Corner radius, opacity, hover style (Fill, Bar, Outline, Text or None), border, drop shadow, header on or off |
-| Text | Font (RuneScape Regular, Small or Bold, or Sans or Serif), size, text shadow |
-| Action highlights | Pick a colour for specific actions such as Attack or Pickpocket, with an option to make them bold |
+| Style | Corner radius, opacity, hover style, border, drop shadow, header on or off |
+| Text | RuneScape Regular, Small or Bold, Sans or Serif, font size and text shadow |
+| Action highlights | Colours and optional bold text for actions such as Attack or Pickpocket |
 | Targets | Colours for NPCs, players, items, objects and everything else |
-| Combat levels | Colour them by how they compare to your level, or hide them |
-| Themes | Save, rename, duplicate, delete, and share by export and import |
-
-Everything is set from the Better Right Click panel in the RuneLite sidebar, with a live preview as you go.
+| Combat levels | Keep the game's colours, colour by level difference, or hide levels |
+| Themes | Save, rename, duplicate, delete, export and import custom themes |
 
 ## Installation
 
-Once Better Right Click is listed on the Plugin Hub, open RuneLite's configuration panel, open the Plugin Hub, search for "Better Right Click" and install it. The sidebar button opens the theme editor.
+Once Better Right Click is listed on the Plugin Hub, open RuneLite's configuration panel, open the Plugin Hub, search for **Better Right Click** and install it.
 
-## Setup
+## Getting started
 
-In Interface Styles, turn off "High detail menu" and set "Menu alpha" to 255, or turn off Interface Styles, to avoid conflicts with this plugin.
+1. Click the Better Right Click button in the RuneLite sidebar and select a built-in theme.
+2. Expand the editor sections and adjust the appearance. Changes are shown immediately in the preview and in game.
+3. To keep changes to a built-in theme, click **Save as…** and create a custom theme. Use **Save** for later changes to that custom theme.
 
-Better Right Click keeps the game's native menu width and click regions. Scrollable menus and menus containing submenus use the normal game appearance. This includes the submenus created by Interface Styles' condensed player options.
+Appearance and theme settings are in the sidebar editor. The **Show sidebar button** setting is in Better Right Click's normal RuneLite configuration page, where you can restore the button if you hide it.
 
-## Settings guide
+## Compatibility
 
-See the [settings guide](docs/GUIDE.md) for what every option does and how to share themes.
+Interface Styles can remain enabled, but its **High detail menu** must be off and **Menu alpha** must be 255. Otherwise the two plugins can draw conflicting menus.
+
+Better Right Click keeps the game's native menu width, row positions and click regions. Scrollable menus and menus containing submenus use the normal game appearance. This includes player menus containing submenus created by Interface Styles' condensed player options.
+
+See the [full settings guide](docs/GUIDE.md) for theme sharing, profiles, reset behaviour, advanced settings and troubleshooting.
 
 ## License
 
