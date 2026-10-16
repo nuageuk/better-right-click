@@ -670,14 +670,20 @@ final class MenuRenderer
 			targetMode = config.targetMode();
 			levelMode = config.combatLevelMode();
 			localLevel = localCombatLevel;
-			npc = config.npcColour();
-			player = config.playerColour();
-			item = config.itemColour();
-			object = config.objectColour();
-			other = config.otherColour();
-			lower = config.lowerLevelColour();
-			same = config.sameLevelColour();
-			higher = config.higherLevelColour();
+			if (targetMode == TargetMode.CUSTOM)
+			{
+				npc = config.npcColour();
+				player = config.playerColour();
+				item = config.itemColour();
+				object = config.objectColour();
+				other = config.otherColour();
+			}
+			if (levelMode == CombatLevelMode.CUSTOM)
+			{
+				lower = config.lowerLevelColour();
+				same = config.sameLevelColour();
+				higher = config.higherLevelColour();
+			}
 		}
 
 		private Color resolve(Run run, TargetKind kind)
