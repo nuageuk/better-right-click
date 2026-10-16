@@ -15,7 +15,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import net.runelite.api.Client;
@@ -101,14 +100,6 @@ final class MenuRenderer
 	private boolean boldHighlights;
 	private boolean hideLevel;
 	private int textOffsetX;
-	// Bumped when anything that affects text width changes.
-	private int styleVersion;
-
-	// Menus stay open and unchanged for many frames, so the last width is reused until something changes.
-	private int measuredWidth;
-	private int measuredRowsVersion = -1;
-	private int measuredStyleVersion = -1;
-
 	/**
 	 * @param client null when not on the client thread; {@code <img>} tags are then skipped
 	 * @param localCombatLevel used to colour combat levels in Custom mode
@@ -128,29 +119,6 @@ final class MenuRenderer
 		{
 			g.dispose();
 		}
-	}
-
-	/**
-	 * Width of the widest row (and the header) plus horizontal padding, measured the way the rows are
-	 * drawn. Used instead of the game's menu width, which adds its own padding and counts hidden levels.
-	 */
-	int measureWidth(Graphics2D graphics, Client client, Theme theme, BetterRightClickConfig config, List<Row> rows,
-		int rowsVersion)
-	{
-		prepare(graphics, client, theme, config);
-		if (rowsVersion == measuredRowsVersion && styleVersion == measuredStyleVersion)
-		{
-			return measuredWidth;
-		}
-		int widest = theme.showHeader ? metrics.stringWidth(HEADER_TEXT) : 0;
-		for (int i = 0; i < rows.size(); i++)
-		{
-			widest = Math.max(widest, layoutRow(null, rows.get(i), 0, 0, Integer.MAX_VALUE, false));
-		}
-		measuredWidth = widest + textOffsetX * 2;
-		measuredRowsVersion = rowsVersion;
-		measuredStyleVersion = styleVersion;
-		return measuredWidth;
 	}
 
 	private void prepare(Graphics2D graphics, Client client, Theme theme, BetterRightClickConfig config)
@@ -181,10 +149,6 @@ final class MenuRenderer
 		Map<String, Color> newRules = highlights ? rules(config.highlightRules()) : Collections.emptyMap();
 		boolean hide = config.combatLevelMode() == CombatLevelMode.HIDE;
 		int offset = Limits.textOffsetX(config);
-		if (themeChanged || bold != boldHighlights || newRules != rules || hide != hideLevel || offset != textOffsetX)
-		{
-			styleVersion++;
-		}
 		highlightMetrics = bold ? graphics.getFontMetrics(boldFont) : metrics;
 		boldHighlights = bold;
 		rules = newRules;
@@ -666,15 +630,12 @@ final class MenuRenderer
 		/**
 		 * Lets the overlay reuse rows across frames instead of allocating them.
 		 *
-		 * @return true if the text changed, which is all that affects the row's width
 		 */
-		boolean set(String option, String target, TargetKind kind)
+		void set(String option, String target, TargetKind kind)
 		{
-			boolean changed = !Objects.equals(this.option, option) || !Objects.equals(this.target, target);
 			this.option = option;
 			this.target = target;
 			this.kind = kind;
-			return changed;
 		}
 	}
 
