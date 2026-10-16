@@ -36,7 +36,7 @@ Once Better Right Click is listed on the Plugin Hub, open RuneLite's configurati
 2. Expand the editor sections and adjust the appearance. Changes are shown immediately in the preview and in game.
 3. To keep changes to a built-in theme, click **Save as…** and create a custom theme. Use **Save** for later changes to that custom theme.
 
-Appearance and theme settings are in the sidebar editor. The **Show sidebar button** setting is in Better Right Click's normal RuneLite configuration page, where you can restore the button if you hide it.
+Appearance and theme settings are in the sidebar editor. The **Show sidebar button** setting is in Better Right Click's normal RuneLite configuration page, where you can restore the button if you hide it. Both Reset controls restore defaults and Classic while preserving saved custom themes. RuneLite's Reset also restores sidebar visibility.
 
 ## Compatibility
 

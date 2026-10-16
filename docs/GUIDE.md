@@ -167,9 +167,9 @@ If a theme disappears after a profile switch, switch back to the profile where i
 
 Use **Show sidebar button** to hide or restore the Better Right Click sidebar button. It is enabled by default. If the button is missing, open Better Right Click in RuneLite's normal configuration panel and enable this setting. **Back** returns to RuneLite's plugin list.
 
-The **Reset** button shown here is RuneLite's full plugin-configuration reset. It is not the same as **Reset all settings** in the sidebar. RuneLite's Reset restores every Better Right Click configuration value and removes persisted custom themes. Export any themes you want to keep before using it.
+The **Reset** button shown here restores Better Right Click's configuration defaults, selects Classic and restores the sidebar button. Saved custom themes are preserved.
 
-Use the sidebar's **Advanced > Reset all settings** when you want to restore visual defaults and Classic while preserving saved custom themes.
+The sidebar's **Advanced > Reset all settings** also restores visual defaults and Classic while preserving saved custom themes, but it does not change sidebar visibility.
 
 ## Compatibility and limitations
 
@@ -207,4 +207,4 @@ Custom themes are profile-specific. Switch back to the original RuneLite profile
 
 ### Resetting the plugin
 
-Use **Advanced > Reset all settings** in the sidebar to restore defaults while preserving saved custom themes. RuneLite's normal **Reset** removes saved custom themes as part of a full configuration reset.
+Both **Advanced > Reset all settings** in the sidebar and RuneLite's normal **Reset** restore defaults and Classic while preserving saved custom themes. RuneLite's Reset also restores the sidebar button.
