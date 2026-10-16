@@ -14,6 +14,7 @@ import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.config.RuneLiteConfig;
 import net.runelite.client.events.ConfigChanged;
+import net.runelite.client.events.ProfileChanged;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
@@ -61,6 +62,9 @@ public class BetterRightClickPlugin extends Plugin
 
 	@Inject
 	private LocalPlayerSnapshot localPlayer;
+
+	@Inject
+	private ThemeManager themeManager;
 
 	// Created in startUp() rather than injected: RuneLite installs its look and feel after plugins
 	// load, and Swing components built before that keep the default light styling. Volatile because
@@ -156,6 +160,22 @@ public class BetterRightClickPlugin extends Plugin
 		{
 			updateInterfaceStylesWarning();
 		}
+	}
+
+	@Subscribe
+	public void onProfileChanged(ProfileChanged event)
+	{
+		SwingUtilities.invokeLater(() ->
+		{
+			themeManager.reload();
+			BetterRightClickPanel current = panel;
+			if (current != null)
+			{
+				current.reloadFromConfig();
+			}
+			updateSidebarButton();
+			updateInterfaceStylesWarning();
+		});
 	}
 
 	@Provides

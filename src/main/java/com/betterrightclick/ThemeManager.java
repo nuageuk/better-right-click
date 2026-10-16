@@ -49,7 +49,7 @@ class ThemeManager
 		this.configManager = configManager;
 		this.config = config;
 		this.gson = gson;
-		load();
+		reload();
 	}
 
 	Theme effectiveTheme()
@@ -225,11 +225,11 @@ class ThemeManager
 	}
 
 	/**
-	 * Called once from the constructor, so everything that uses this singleton (including the panel
-	 * while it builds its UI) sees the saved state. Corrupt config loads as defaults rather than
-	 * failing startUp.
+	 * Replaces cached theme state from the active RuneLite configuration profile. This runs during
+	 * construction and again after profile changes. Corrupt config loads as defaults rather than
+	 * failing startup.
 	 */
-	private void load()
+	void reload()
 	{
 		userThemes.clear();
 		try

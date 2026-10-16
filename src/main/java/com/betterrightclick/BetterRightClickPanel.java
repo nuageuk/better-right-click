@@ -178,6 +178,26 @@ class BetterRightClickPanel extends PluginPanel
 		repaint();
 	}
 
+	/**
+	 * Re-reads all controls after the active RuneLite configuration profile changes. EDT only.
+	 */
+	void reloadFromConfig()
+	{
+		refreshing = true;
+		try
+		{
+			for (Runnable r : globalControlRefreshers)
+			{
+				r.run();
+			}
+		}
+		finally
+		{
+			refreshing = false;
+		}
+		refresh();
+	}
+
 	private static JLabel buildInterfaceStylesWarning()
 	{
 		JLabel label = new WrappingLabel("<html>" + INTERFACE_STYLES_WARNING + "</html>");
