@@ -273,9 +273,12 @@ class BetterRightClickPanel extends PluginPanel
 			@Override
 			public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus)
 			{
-				Theme theme = (Theme) value;
+				Theme theme = value instanceof Theme ? (Theme) value : null;
 				String text = theme == null ? "" : theme.builtIn ? "🔒 " + theme.name : theme.name;
-				return super.getListCellRendererComponent(list, text, index, isSelected, cellHasFocus);
+				JComponent renderer = (JComponent) super.getListCellRendererComponent(
+					list, text, index, isSelected, cellHasFocus);
+				renderer.putClientProperty("html.disable", Boolean.TRUE);
+				return renderer;
 			}
 		});
 		themeCombo.addActionListener(e ->

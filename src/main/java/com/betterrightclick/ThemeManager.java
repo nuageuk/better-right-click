@@ -301,7 +301,28 @@ class ThemeManager
 
 	private static String cleanName(String name)
 	{
-		String trimmed = name == null ? "" : name.trim();
+		String value = name == null ? "" : name;
+		StringBuilder cleaned = null;
+		for (int offset = 0; offset < value.length();)
+		{
+			int codePoint = value.codePointAt(offset);
+			int width = Character.charCount(codePoint);
+			if (Character.isISOControl(codePoint))
+			{
+				if (cleaned == null)
+				{
+					cleaned = new StringBuilder(value.length());
+					cleaned.append(value, 0, offset);
+				}
+			}
+			else if (cleaned != null)
+			{
+				cleaned.appendCodePoint(codePoint);
+			}
+			offset += width;
+		}
+
+		String trimmed = (cleaned == null ? value : cleaned.toString()).trim();
 		return trimmed.isEmpty() ? DEFAULT_THEME_NAME : Limits.truncate(trimmed, Limits.MAX_THEME_NAME_LENGTH);
 	}
 

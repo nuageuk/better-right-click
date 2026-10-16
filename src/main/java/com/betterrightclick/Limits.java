@@ -36,7 +36,17 @@ final class Limits
 
 	static String truncate(String value, int maxLength)
 	{
-		return value.length() > maxLength ? value.substring(0, maxLength) : value;
+		if (value.length() <= maxLength)
+		{
+			return value;
+		}
+		int end = maxLength;
+		if (end > 0 && Character.isHighSurrogate(value.charAt(end - 1))
+			&& Character.isLowSurrogate(value.charAt(end)))
+		{
+			end--;
+		}
+		return value.substring(0, end);
 	}
 
 	static int textOffsetX(BetterRightClickConfig config)
