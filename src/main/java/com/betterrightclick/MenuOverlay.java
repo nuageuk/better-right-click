@@ -68,7 +68,7 @@ class MenuOverlay extends Overlay
 	 */
 	private MenuEntry[] drawableEntries()
 	{
-		if (failed || !client.isMenuOpen() || client.isMenuScrollable())
+		if (!canInspectMenu(failed, client.isMenuOpen(), client.isMenuScrollable()))
 		{
 			return null;
 		}
@@ -82,14 +82,24 @@ class MenuOverlay extends Overlay
 		{
 			return null;
 		}
+		return containsSubMenu(entries) ? null : entries;
+	}
+
+	static boolean canInspectMenu(boolean failed, boolean open, boolean scrollable)
+	{
+		return !failed && open && !scrollable;
+	}
+
+	static boolean containsSubMenu(MenuEntry[] entries)
+	{
 		for (MenuEntry entry : entries)
 		{
 			if (entry != null && entry.getSubMenu() != null)
 			{
-				return null;
+				return true;
 			}
 		}
-		return entries;
+		return false;
 	}
 
 	@Override
@@ -114,7 +124,7 @@ class MenuOverlay extends Overlay
 
 	private void renderMenu(Graphics2D graphics, Menu menu, MenuEntry[] entries)
 	{
-		bounds.setBounds(menu.getMenuX(), menu.getMenuY(), menu.getMenuWidth(), menu.getMenuHeight());
+		setNativeBounds(bounds, menu);
 		Theme theme = themeManager.effectiveTheme();
 
 		fillRows(entries);
@@ -123,6 +133,11 @@ class MenuOverlay extends Overlay
 		Player local = client.getLocalPlayer();
 		int localLevel = local != null ? local.getCombatLevel() : 0;
 		renderer.render(graphics, client, theme, config, rows, bounds, hoverIndex, localLevel);
+	}
+
+	static void setNativeBounds(Rectangle target, Menu menu)
+	{
+		target.setBounds(menu.getMenuX(), menu.getMenuY(), menu.getMenuWidth(), menu.getMenuHeight());
 	}
 
 	/**
@@ -169,7 +184,7 @@ class MenuOverlay extends Overlay
 		return index < rows.size() ? index : -1;
 	}
 
-	private static MenuRenderer.TargetKind classify(MenuEntry entry)
+	static MenuRenderer.TargetKind classify(MenuEntry entry)
 	{
 		if (entry.getNpc() != null)
 		{

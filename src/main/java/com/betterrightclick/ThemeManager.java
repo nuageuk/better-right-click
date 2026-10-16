@@ -9,6 +9,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.BiConsumer;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import lombok.extern.slf4j.Slf4j;
@@ -35,7 +36,7 @@ class ThemeManager
 	private static final String ERROR_TOO_LONG = "That text is too long to be an exported theme.";
 	private static final String ERROR_INVALID = "That doesn't look like a valid exported theme.";
 
-	private final ConfigManager configManager;
+	private final BiConsumer<String, String> configWriter;
 	private final BetterRightClickConfig config;
 	private final Gson gson;
 
@@ -46,7 +47,12 @@ class ThemeManager
 	@Inject
 	ThemeManager(ConfigManager configManager, BetterRightClickConfig config, Gson gson)
 	{
-		this.configManager = configManager;
+		this((key, value) -> configManager.setConfiguration(BetterRightClickConfig.GROUP, key, value), config, gson);
+	}
+
+	ThemeManager(BiConsumer<String, String> configWriter, BetterRightClickConfig config, Gson gson)
+	{
+		this.configWriter = configWriter;
 		this.config = config;
 		this.gson = gson;
 		reload();
@@ -332,12 +338,12 @@ class ThemeManager
 		{
 			stored.add(StoredTheme.from(theme));
 		}
-		configManager.setConfiguration(BetterRightClickConfig.GROUP, BetterRightClickConfig.KEY_USER_THEMES, gson.toJson(stored));
+		configWriter.accept(BetterRightClickConfig.KEY_USER_THEMES, gson.toJson(stored));
 	}
 
 	private void persistActiveId()
 	{
-		configManager.setConfiguration(BetterRightClickConfig.GROUP, BetterRightClickConfig.KEY_ACTIVE_THEME, activeId);
+		configWriter.accept(BetterRightClickConfig.KEY_ACTIVE_THEME, activeId);
 	}
 
 	/**
