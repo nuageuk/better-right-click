@@ -179,25 +179,37 @@ class MenuOverlay extends Overlay
 		{
 			return MenuRenderer.TargetKind.PLAYER;
 		}
+		MenuAction type = entry.getType();
+		if (isGameObjectAction(type))
+		{
+			return MenuRenderer.TargetKind.OBJECT;
+		}
 		if (entry.getItemId() != NO_ITEM)
 		{
 			return MenuRenderer.TargetKind.ITEM;
 		}
-		MenuAction type = entry.getType();
+		return MenuRenderer.TargetKind.OTHER;
+	}
+
+	static boolean isGameObjectAction(MenuAction type)
+	{
 		if (type == null)
 		{
-			return MenuRenderer.TargetKind.OTHER;
+			return false;
 		}
 		switch (type)
 		{
+			case ITEM_USE_ON_GAME_OBJECT:
+			case WIDGET_TARGET_ON_GAME_OBJECT:
 			case GAME_OBJECT_FIRST_OPTION:
 			case GAME_OBJECT_SECOND_OPTION:
 			case GAME_OBJECT_THIRD_OPTION:
 			case GAME_OBJECT_FOURTH_OPTION:
 			case GAME_OBJECT_FIFTH_OPTION:
-				return MenuRenderer.TargetKind.OBJECT;
+			case EXAMINE_OBJECT:
+				return true;
 			default:
-				return MenuRenderer.TargetKind.OTHER;
+				return false;
 		}
 	}
 }
