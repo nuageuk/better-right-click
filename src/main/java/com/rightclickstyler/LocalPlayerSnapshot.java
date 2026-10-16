@@ -1,4 +1,4 @@
-package com.betterrightclick;
+package com.rightclickstyler;
 
 import javax.inject.Singleton;
 

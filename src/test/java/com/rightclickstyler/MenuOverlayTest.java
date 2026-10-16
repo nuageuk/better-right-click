@@ -1,4 +1,4 @@
-package com.betterrightclick;
+package com.rightclickstyler;
 
 import java.awt.Rectangle;
 import java.util.function.Consumer;

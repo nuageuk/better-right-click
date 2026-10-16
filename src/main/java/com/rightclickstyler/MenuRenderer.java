@@ -1,4 +1,4 @@
-package com.betterrightclick;
+package com.rightclickstyler;
 
 import java.awt.Color;
 import java.awt.Font;
@@ -104,7 +104,7 @@ final class MenuRenderer
 	 * @param client null when not on the client thread; {@code <img>} tags are then skipped
 	 * @param localCombatLevel used to colour combat levels in Custom mode
 	 */
-	void render(Graphics2D graphics, Client client, Theme theme, BetterRightClickConfig config,
+	void render(Graphics2D graphics, Client client, Theme theme, RightClickStylerConfig config,
 		List<Row> rows, Rectangle bounds, int hoverIndex, int localCombatLevel)
 	{
 		// Work on a copy so no colour/font/clip change leaks to other overlays or Swing children.
@@ -121,7 +121,7 @@ final class MenuRenderer
 		}
 	}
 
-	private void prepare(Graphics2D graphics, Client client, Theme theme, BetterRightClickConfig config)
+	private void prepare(Graphics2D graphics, Client client, Theme theme, RightClickStylerConfig config)
 	{
 		boolean themeChanged = theme != this.theme;
 		if (themeChanged)
@@ -156,7 +156,7 @@ final class MenuRenderer
 		textOffsetX = offset;
 	}
 
-	private void renderMenu(Graphics2D graphics, BetterRightClickConfig config, List<Row> rows, Rectangle bounds,
+	private void renderMenu(Graphics2D graphics, RightClickStylerConfig config, List<Row> rows, Rectangle bounds,
 		int hoverIndex)
 	{
 		int baselineNudge = Limits.baselineNudge(config);
@@ -190,7 +190,7 @@ final class MenuRenderer
 		drawBorder(graphics, box);
 	}
 
-	private void drawRows(Graphics2D graphics, BetterRightClickConfig config, List<Row> rows, Rectangle bounds,
+	private void drawRows(Graphics2D graphics, RightClickStylerConfig config, List<Row> rows, Rectangle bounds,
 		int hoverIndex, int firstRowY, int baselineNudge)
 	{
 		boolean showHitRows = config.showHitRows();
@@ -665,7 +665,7 @@ final class MenuRenderer
 		private Color same;
 		private Color higher;
 
-		private void load(BetterRightClickConfig config, int localCombatLevel)
+		private void load(RightClickStylerConfig config, int localCombatLevel)
 		{
 			targetMode = config.targetMode();
 			levelMode = config.combatLevelMode();

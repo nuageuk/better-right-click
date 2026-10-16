@@ -1,4 +1,4 @@
-package com.betterrightclick;
+package com.rightclickstyler;
 
 import com.google.inject.Provides;
 import javax.inject.Inject;
@@ -24,11 +24,11 @@ import net.runelite.client.ui.overlay.OverlayManager;
 import net.runelite.client.util.ImageUtil;
 
 @PluginDescriptor(
-	name = BetterRightClickPlugin.NAME
+	name = RightClickStylerPlugin.NAME
 )
-public class BetterRightClickPlugin extends Plugin
+public class RightClickStylerPlugin extends Plugin
 {
-	static final String NAME = "Better Right Click";
+	static final String NAME = "Right Click Styler";
 	private static final String INTERFACE_STYLES_GROUP = "interfaceStyles";
 	private static final String HD_MENU_KEY = "hdMenu";
 	private static final String MENU_ALPHA_KEY = "menuAlpha";
@@ -55,7 +55,7 @@ public class BetterRightClickPlugin extends Plugin
 	private ConfigManager configManager;
 
 	@Inject
-	private BetterRightClickConfig config;
+	private RightClickStylerConfig config;
 
 	@Inject
 	private ClientToolbar clientToolbar;
@@ -69,7 +69,7 @@ public class BetterRightClickPlugin extends Plugin
 	// Created in startUp() rather than injected: RuneLite installs its look and feel after plugins
 	// load, and Swing components built before that keep the default light styling. Volatile because
 	// ConfigChanged can arrive on any thread.
-	private volatile BetterRightClickPanel panel;
+	private volatile RightClickStylerPanel panel;
 	// Volatile because ConfigChanged can arrive on any thread.
 	private volatile NavigationButton navigationButton;
 	// Once per session, and only once it could actually be seen. Client thread only, apart from the
@@ -83,10 +83,10 @@ public class BetterRightClickPlugin extends Plugin
 		// Reload before building the panel so enabling the plugin always uses the active profile.
 		// Register the overlay only after the panel has been built successfully.
 		themeManager.reload();
-		panel = getInjector().getInstance(BetterRightClickPanel.class);
+		panel = getInjector().getInstance(RightClickStylerPanel.class);
 		navigationButton = NavigationButton.builder()
 			.tooltip(NAME)
-			.icon(ImageUtil.loadImageResource(BetterRightClickPlugin.class, "panel_icon.png"))
+			.icon(ImageUtil.loadImageResource(RightClickStylerPlugin.class, "panel_icon.png"))
 			.priority(NAV_PRIORITY)
 			.panel(panel)
 			.build();
@@ -152,8 +152,8 @@ public class BetterRightClickPlugin extends Plugin
 	@Subscribe
 	public void onConfigChanged(ConfigChanged event)
 	{
-		if (BetterRightClickConfig.GROUP.equals(event.getGroup())
-			&& BetterRightClickConfig.KEY_SHOW_SIDEBAR_BUTTON.equals(event.getKey()))
+		if (RightClickStylerConfig.GROUP.equals(event.getGroup())
+			&& RightClickStylerConfig.KEY_SHOW_SIDEBAR_BUTTON.equals(event.getKey()))
 		{
 			updateSidebarButton();
 			return;
@@ -173,7 +173,7 @@ public class BetterRightClickPlugin extends Plugin
 		{
 			return;
 		}
-		BetterRightClickPanel expectedPanel = panel;
+		RightClickStylerPanel expectedPanel = panel;
 		SwingUtilities.invokeLater(() ->
 		{
 			if (!running || panel != expectedPanel)
@@ -181,7 +181,7 @@ public class BetterRightClickPlugin extends Plugin
 				return;
 			}
 			themeManager.reload();
-			BetterRightClickPanel current = panel;
+			RightClickStylerPanel current = panel;
 			if (current != null)
 			{
 				current.reloadFromConfig();
@@ -194,7 +194,7 @@ public class BetterRightClickPlugin extends Plugin
 	@Override
 	public void resetConfiguration()
 	{
-		BetterRightClickPanel expectedPanel = panel;
+		RightClickStylerPanel expectedPanel = panel;
 		Runnable reload = () ->
 		{
 			if (expectedPanel == null)
@@ -226,9 +226,9 @@ public class BetterRightClickPlugin extends Plugin
 	}
 
 	@Provides
-	BetterRightClickConfig provideConfig(ConfigManager configManager)
+	RightClickStylerConfig provideConfig(ConfigManager configManager)
 	{
-		return configManager.getConfig(BetterRightClickConfig.class);
+		return configManager.getConfig(RightClickStylerConfig.class);
 	}
 
 	// ClientToolbar hands both calls to the EDT, and adding or removing twice is harmless.
@@ -271,7 +271,7 @@ public class BetterRightClickPlugin extends Plugin
 	private void updateInterfaceStylesWarning()
 	{
 		boolean active = isInterfaceStylesConflictActive();
-		BetterRightClickPanel current = panel;
+		RightClickStylerPanel current = panel;
 		if (current != null)
 		{
 			SwingUtilities.invokeLater(() -> current.setInterfaceStylesWarningVisible(active));

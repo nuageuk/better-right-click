@@ -1,4 +1,4 @@
-package com.betterrightclick;
+package com.rightclickstyler;
 
 import java.awt.Component;
 import javax.swing.DefaultListCellRenderer;
@@ -10,12 +10,12 @@ import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
-public class BetterRightClickPanelTest
+public class RightClickStylerPanelTest
 {
 	@Test
 	public void disablesHtmlBeforeFirstThemeNameRender()
 	{
-		DefaultListCellRenderer renderer = BetterRightClickPanel.themeListCellRenderer();
+		DefaultListCellRenderer renderer = RightClickStylerPanel.themeListCellRenderer();
 		Theme theme = BuiltInThemes.find(BuiltInThemes.DEFAULT_ID)
 			.withIdentity("literal", "<html>Rune Ω !?", false);
 

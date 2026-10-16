@@ -1,4 +1,4 @@
-package com.betterrightclick;
+package com.rightclickstyler;
 
 import com.google.gson.Gson;
 import java.awt.Color;
@@ -29,7 +29,7 @@ import net.runelite.client.config.ConfigManager;
 @Singleton
 class ThemeManager
 {
-	private static final String EXPORT_PREFIX = "betterrightclick:";
+	private static final String EXPORT_PREFIX = "rightclickstyler:";
 	private static final String DEFAULT_THEME_NAME = "Theme";
 	private static final String COPY_SUFFIX = " copy";
 
@@ -39,7 +39,7 @@ class ThemeManager
 
 	private final Supplier<String> themesReader;
 	private final BiConsumer<String, String> configWriter;
-	private final BetterRightClickConfig config;
+	private final RightClickStylerConfig config;
 	private final Gson gson;
 
 	private final Map<String, Theme> userThemes = new LinkedHashMap<>();
@@ -47,15 +47,15 @@ class ThemeManager
 	private volatile Theme working = BuiltInThemes.find(BuiltInThemes.DEFAULT_ID);
 
 	@Inject
-	ThemeManager(ConfigManager configManager, BetterRightClickConfig config, Gson gson)
+	ThemeManager(ConfigManager configManager, RightClickStylerConfig config, Gson gson)
 	{
-		this(() -> configManager.getConfiguration(BetterRightClickConfig.GROUP,
-			BetterRightClickConfig.KEY_USER_THEMES),
-			(key, value) -> configManager.setConfiguration(BetterRightClickConfig.GROUP, key, value), config, gson);
+		this(() -> configManager.getConfiguration(RightClickStylerConfig.GROUP,
+			RightClickStylerConfig.KEY_USER_THEMES),
+			(key, value) -> configManager.setConfiguration(RightClickStylerConfig.GROUP, key, value), config, gson);
 	}
 
 	ThemeManager(Supplier<String> themesReader, BiConsumer<String, String> configWriter,
-		BetterRightClickConfig config, Gson gson)
+		RightClickStylerConfig config, Gson gson)
 	{
 		this.themesReader = themesReader;
 		this.configWriter = configWriter;
@@ -264,7 +264,7 @@ class ThemeManager
 		}
 		catch (RuntimeException e)
 		{
-			log.warn("Saved Better Right Click themes are corrupt; starting with none", e);
+			log.warn("Saved custom themes for Right Click Styler are corrupt; starting with none", e);
 			userThemes.clear();
 		}
 
@@ -344,12 +344,12 @@ class ThemeManager
 		{
 			stored.add(StoredTheme.from(theme));
 		}
-		configWriter.accept(BetterRightClickConfig.KEY_USER_THEMES, gson.toJson(stored));
+		configWriter.accept(RightClickStylerConfig.KEY_USER_THEMES, gson.toJson(stored));
 	}
 
 	private void persistActiveId()
 	{
-		configWriter.accept(BetterRightClickConfig.KEY_ACTIVE_THEME, activeId);
+		configWriter.accept(RightClickStylerConfig.KEY_ACTIVE_THEME, activeId);
 	}
 
 	/**

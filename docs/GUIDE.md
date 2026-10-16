@@ -1,6 +1,6 @@
 # Settings guide
 
-Most appearance settings are in the Better Right Click panel in the RuneLite sidebar. Sidebar visibility is controlled from Better Right Click's normal RuneLite configuration page.
+Most appearance settings are in the Right Click Styler panel in the RuneLite sidebar. Sidebar visibility is controlled from Right Click Styler's normal RuneLite configuration page.
 
 Classic is selected by default, and every built-in theme uses the RuneScape Bold font by default.
 
@@ -8,7 +8,7 @@ Classic is selected by default, and every built-in theme uses the RuneScape Bold
 
 ## Getting started
 
-1. Click the Better Right Click button in the RuneLite sidebar.
+1. Click the Right Click Styler button in the RuneLite sidebar.
 2. Select Dark, Midnight, Light, Glass or Classic from the theme list.
 3. Click an orange section heading to expand it, then adjust the controls. Changes appear immediately in the preview and in game.
 4. To keep changes made to a built-in theme, click **Save as…**, enter a name and create a custom theme.
@@ -64,7 +64,7 @@ Click a colour to open the colour picker. These colours are part of the theme an
 - **Hover**: the fill used by the Fill and Bar hover styles.
 - **Accent**: the bar in Bar, the outline in Outline, and the hovered action text in Text.
 
-Hover and action highlights are separate. Hover describes the row under the pointer. Action highlights colour matching action text wherever it appears in a menu drawn by Better Right Click.
+Hover and action highlights are separate. Hover describes the row under the pointer. Action highlights colour matching action text wherever it appears in a menu drawn by Right Click Styler.
 
 Classic uses a brown background, black border and header, brown header text and hover fill, white option text and a yellow accent.
 
@@ -155,35 +155,35 @@ The menu always keeps the game's native width. Large fonts, long entries or a la
 
 ## RuneLite profiles
 
-Better Right Click settings, the active theme and saved custom themes belong to the active RuneLite configuration profile. Switching profiles reloads that profile's independent settings and theme list.
+Right Click Styler settings, the active theme and saved custom themes belong to the active RuneLite configuration profile. Switching profiles reloads that profile's independent settings and theme list.
 
 If a theme disappears after a profile switch, switch back to the profile where it was saved or export it there and import it into the new profile. Switching profiles discards unsaved theme edits without a confirmation prompt.
 
 ## RuneLite plugin settings
 
-![Better Right Click plugin settings](images/pluginhubsettings.png)
+![Right Click Styler plugin settings](images/pluginhubsettings.png)
 
 *Sidebar visibility and RuneLite's full configuration reset.*
 
-Use **Show sidebar button** to hide or restore the Better Right Click sidebar button. It is enabled by default. If the button is missing, open Better Right Click in RuneLite's normal configuration panel and enable this setting. **Back** returns to RuneLite's plugin list.
+Use **Show sidebar button** to hide or restore the Right Click Styler sidebar button. It is enabled by default. If the button is missing, open Right Click Styler in RuneLite's normal configuration panel and enable this setting. **Back** returns to RuneLite's plugin list.
 
-The **Reset** button shown here restores Better Right Click's configuration defaults, selects Classic and restores the sidebar button. Saved custom themes are preserved.
+The **Reset** button shown here restores Right Click Styler's configuration defaults, selects Classic and restores the sidebar button. Saved custom themes are preserved.
 
 The sidebar's **Advanced > Reset all settings** also restores visual defaults and Classic while preserving saved custom themes, but it does not change sidebar visibility.
 
 ## Compatibility and limitations
 
-- Interface Styles can remain enabled if **High detail menu** is off and **Menu alpha** is 255. If either setting conflicts, the sidebar shows a warning and a chat message appears once per Better Right Click plugin session when the conflict is detected while logged in.
+- Interface Styles can remain enabled if **High detail menu** is off and **Menu alpha** is 255. If either setting conflicts, the sidebar shows a warning and a chat message appears once per Right Click Styler plugin session when the conflict is detected while logged in.
 - Scrollable menus use the normal game appearance.
 - Any menu containing a submenu uses the normal game appearance because the plugin cannot determine whether the submenu is open. Interface Styles' condensed player options can therefore make the whole player menu use native styling.
-- Better Right Click preserves the game's menu width, row positions and click regions. It changes appearance only.
+- Right Click Styler preserves the game's menu width, row positions and click regions. It changes appearance only.
 - If custom rendering fails, the plugin uses the normal game menu for the rest of that plugin session.
 
 ## Troubleshooting
 
 ### A menu uses the normal game appearance
 
-Scrollable menus and menus containing submenus are intentionally left to the game. If every ordinary menu remains native after a drawing failure, disable and re-enable Better Right Click to start a new plugin session.
+Scrollable menus and menus containing submenus are intentionally left to the game. If every ordinary menu remains native after a drawing failure, disable and re-enable Right Click Styler to start a new plugin session.
 
 ### The normal menu appears beneath a translucent theme
 
@@ -191,7 +191,7 @@ Open Interface Styles, turn off **High detail menu** and set **Menu alpha** to 2
 
 ### The sidebar button disappeared
 
-Open Better Right Click in RuneLite's normal configuration panel and enable **Show sidebar button**.
+Open Right Click Styler in RuneLite's normal configuration panel and enable **Show sidebar button**.
 
 ### A theme import fails
 

@@ -1,13 +1,13 @@
-package com.betterrightclick;
+package com.rightclickstyler;
 
 import net.runelite.client.RuneLite;
 import net.runelite.client.externalplugins.ExternalPluginManager;
 
-public class BetterRightClickPluginTest
+public class RightClickStylerPluginTest
 {
 	public static void main(String[] args) throws Exception
 	{
-		ExternalPluginManager.loadBuiltin(BetterRightClickPlugin.class);
+		ExternalPluginManager.loadBuiltin(RightClickStylerPlugin.class);
 		RuneLite.main(args);
 	}
 }

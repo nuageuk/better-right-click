@@ -1,4 +1,4 @@
-package com.betterrightclick;
+package com.rightclickstyler;
 
 import java.awt.Dimension;
 import java.awt.Graphics2D;
@@ -23,7 +23,7 @@ class MenuOverlay extends Overlay
 	private static final int NO_ITEM = -1;
 
 	private final Client client;
-	private final BetterRightClickConfig config;
+	private final RightClickStylerConfig config;
 	private final ThemeManager themeManager;
 	private final MenuRenderer renderer = new MenuRenderer();
 	private final List<MenuRenderer.Row> rows = new ArrayList<>();
@@ -38,7 +38,7 @@ class MenuOverlay extends Overlay
 	private volatile boolean failed;
 
 	@Inject
-	private MenuOverlay(Client client, BetterRightClickConfig config, ThemeManager themeManager)
+	private MenuOverlay(Client client, RightClickStylerConfig config, ThemeManager themeManager)
 	{
 		this.client = client;
 		this.config = config;
@@ -117,7 +117,7 @@ class MenuOverlay extends Overlay
 		catch (RuntimeException e)
 		{
 			failed = true;
-			log.warn("Better Right Click failed to draw the menu; using the vanilla menu for the rest of this session", e);
+			log.warn("Right Click Styler failed to draw the menu; using the vanilla menu for the rest of this session", e);
 		}
 		return null;
 	}

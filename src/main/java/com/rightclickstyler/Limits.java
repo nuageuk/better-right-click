@@ -1,4 +1,4 @@
-package com.betterrightclick;
+package com.rightclickstyler;
 
 /**
  * Valid ranges for every user-editable value. Shared by the panel's spinners and by everything that
@@ -49,12 +49,12 @@ final class Limits
 		return value.substring(0, end);
 	}
 
-	static int textOffsetX(BetterRightClickConfig config)
+	static int textOffsetX(RightClickStylerConfig config)
 	{
 		return clamp(config.textOffsetX(), MIN_TEXT_OFFSET_X, MAX_TEXT_OFFSET_X);
 	}
 
-	static int baselineNudge(BetterRightClickConfig config)
+	static int baselineNudge(RightClickStylerConfig config)
 	{
 		return clamp(config.baselineNudge(), MIN_BASELINE_NUDGE, MAX_BASELINE_NUDGE);
 	}

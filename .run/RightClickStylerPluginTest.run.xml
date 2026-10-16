@@ -1,12 +1,12 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="BetterRightClickPluginTest" type="Application" factoryName="Application" nameIsGenerated="true">
-    <option name="MAIN_CLASS_NAME" value="com.betterrightclick.BetterRightClickPluginTest" />
-    <module name="better-right-click.test" />
+  <configuration default="false" name="RightClickStylerPluginTest" type="Application" factoryName="Application" nameIsGenerated="true">
+    <option name="MAIN_CLASS_NAME" value="com.rightclickstyler.RightClickStylerPluginTest" />
+    <module name="right-click-styler.test" />
     <option name="VM_PARAMETERS" value="-ea" />
     <option name="PROGRAM_PARAMETERS" value="--developer-mode" />
     <extension name="coverage">
       <pattern>
-        <option name="PATTERN" value="com.betterrightclick.*" />
+        <option name="PATTERN" value="com.rightclickstyler.*" />
         <option name="ENABLED" value="true" />
       </pattern>
     </extension>

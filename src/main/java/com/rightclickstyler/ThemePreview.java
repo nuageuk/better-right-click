@@ -1,4 +1,4 @@
-package com.betterrightclick;
+package com.rightclickstyler;
 
 import java.awt.Dimension;
 import java.awt.Graphics;
@@ -34,13 +34,13 @@ class ThemePreview extends JPanel
 
 	private final LocalPlayerSnapshot localPlayer;
 	private final ThemeManager themeManager;
-	private final BetterRightClickConfig config;
+	private final RightClickStylerConfig config;
 	private final MenuRenderer renderer = new MenuRenderer();
 	private final Rectangle bounds = new Rectangle();
 
 	private int hoverIndex = -1;
 
-	ThemePreview(LocalPlayerSnapshot localPlayer, ThemeManager themeManager, BetterRightClickConfig config)
+	ThemePreview(LocalPlayerSnapshot localPlayer, ThemeManager themeManager, RightClickStylerConfig config)
 	{
 		this.localPlayer = localPlayer;
 		this.themeManager = themeManager;

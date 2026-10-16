@@ -1,4 +1,4 @@
-package com.betterrightclick;
+package com.rightclickstyler;
 
 import com.google.gson.Gson;
 import java.awt.Color;
@@ -59,8 +59,8 @@ public class ThemeManagerTest
 		manager.setWorking(manager.effectiveTheme().withOpacity(51));
 		int writesBeforeReload = config.writes;
 
-		config.current().values.put(BetterRightClickConfig.KEY_USER_THEMES, "[]");
-		config.current().values.put(BetterRightClickConfig.KEY_ACTIVE_THEME, BuiltInThemes.DEFAULT_ID);
+		config.current().values.put(RightClickStylerConfig.KEY_USER_THEMES, "[]");
+		config.current().values.put(RightClickStylerConfig.KEY_ACTIVE_THEME, BuiltInThemes.DEFAULT_ID);
 		manager.reload();
 
 		assertEquals(writesBeforeReload, config.writes);
@@ -81,7 +81,7 @@ public class ThemeManagerTest
 		assertTrue(manager.saveAsNew("Saved theme"));
 		String savedId = manager.activeId();
 
-		assertTrue(config.current().values.containsKey(BetterRightClickConfig.KEY_USER_THEMES));
+		assertTrue(config.current().values.containsKey(RightClickStylerConfig.KEY_USER_THEMES));
 		config.resetAnnotatedConfiguration();
 		manager.reload();
 
@@ -97,12 +97,12 @@ public class ThemeManagerTest
 	@Test
 	public void userThemesAreNotAnAnnotatedResetItem()
 	{
-		for (Method method : BetterRightClickConfig.class.getDeclaredMethods())
+		for (Method method : RightClickStylerConfig.class.getDeclaredMethods())
 		{
 			ConfigItem item = method.getAnnotation(ConfigItem.class);
 			if (item != null)
 			{
-				assertNotEquals(BetterRightClickConfig.KEY_USER_THEMES, item.keyName());
+				assertNotEquals(RightClickStylerConfig.KEY_USER_THEMES, item.keyName());
 			}
 		}
 	}
@@ -135,7 +135,7 @@ public class ThemeManagerTest
 		return new ThemeManager(config::readThemes, config::write, config, new Gson());
 	}
 
-	private static final class TestConfig implements BetterRightClickConfig
+	private static final class TestConfig implements RightClickStylerConfig
 	{
 		private final Map<String, ProfileState> profiles = new HashMap<>();
 		private String profile = "one";
@@ -149,7 +149,7 @@ public class ThemeManagerTest
 		@Override
 		public String activeTheme()
 		{
-			return current().values.getOrDefault(BetterRightClickConfig.KEY_ACTIVE_THEME,
+			return current().values.getOrDefault(RightClickStylerConfig.KEY_ACTIVE_THEME,
 				BuiltInThemes.DEFAULT_ID);
 		}
 
@@ -173,7 +173,7 @@ public class ThemeManagerTest
 
 		private String readThemes()
 		{
-			return current().values.getOrDefault(BetterRightClickConfig.KEY_USER_THEMES, "[]");
+			return current().values.getOrDefault(RightClickStylerConfig.KEY_USER_THEMES, "[]");
 		}
 
 		private void write(String key, String value)
@@ -184,7 +184,7 @@ public class ThemeManagerTest
 
 		private void resetAnnotatedConfiguration()
 		{
-			current().values.remove(BetterRightClickConfig.KEY_ACTIVE_THEME);
+			current().values.remove(RightClickStylerConfig.KEY_ACTIVE_THEME);
 			current().showSidebarButton = true;
 			current().highlightsEnabled = true;
 			current().targetMode = TargetMode.GAME;

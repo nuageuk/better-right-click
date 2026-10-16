@@ -1,4 +1,4 @@
-package com.betterrightclick;
+package com.rightclickstyler;
 
 import java.awt.Color;
 import net.runelite.client.config.Config;
@@ -9,10 +9,10 @@ import net.runelite.client.config.ConfigItem;
  * Every item but the sidebar button toggle is hidden; the sidebar panel is the editor. That toggle
  * has to live here, since turning it off hides the panel. Per-theme settings live on {@link Theme}.
  */
-@ConfigGroup(BetterRightClickConfig.GROUP)
-public interface BetterRightClickConfig extends Config
+@ConfigGroup(RightClickStylerConfig.GROUP)
+public interface RightClickStylerConfig extends Config
 {
-	String GROUP = "betterrightclick";
+	String GROUP = "rightclickstyler";
 
 	// Stored directly through ConfigManager so RuneLite's configuration Reset preserves saved themes.
 	String KEY_USER_THEMES = "userThemes";
@@ -38,7 +38,7 @@ public interface BetterRightClickConfig extends Config
 	@ConfigItem(
 		keyName = KEY_SHOW_SIDEBAR_BUTTON,
 		name = "Show sidebar button",
-		description = "Show the Better Right Click button in the RuneLite sidebar"
+		description = "Show the Right Click Styler button in the RuneLite sidebar"
 	)
 	default boolean showSidebarButton()
 	{

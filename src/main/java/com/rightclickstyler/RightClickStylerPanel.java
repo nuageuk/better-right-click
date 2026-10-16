@@ -1,4 +1,4 @@
-package com.betterrightclick;
+package com.rightclickstyler;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -61,7 +61,7 @@ import net.runelite.client.util.ColorUtil;
 /**
  * Sidebar settings panel, styled to match RuneLite's own plugin config panel.
  */
-class BetterRightClickPanel extends PluginPanel
+class RightClickStylerPanel extends PluginPanel
 {
 	private static final int ROW_GAP = 4;
 	private static final int SPINNER_COLUMNS = 4;
@@ -76,35 +76,35 @@ class BetterRightClickPanel extends PluginPanel
 	private static final String COPIED_LABEL = "Copied!";
 	private static final int COPIED_FLASH_MS = 1500;
 	private static final String INTERFACE_STYLES_WARNING = "Interface Styles' 'High detail menu' or 'Menu alpha' setting "
-		+ "conflicts with Better Right Click. Turn off High detail menu and set Menu alpha to 255, or turn off Interface Styles.";
+		+ "conflicts with Right Click Styler. Turn off High detail menu and set Menu alpha to 255, or turn off Interface Styles.";
 	private static final int WARNING_PADDING = 6;
 	// Before the first layout there is no width yet, so assume the sidebar's usual content width.
 	private static final int WARNING_FALLBACK_WIDTH = PANEL_WIDTH - BORDER_OFFSET * 2;
 	// Everything Reset all settings restores. Themes are kept, so their keys aren't here.
 	private static final String[] GLOBAL_SETTING_KEYS = {
-		BetterRightClickConfig.KEY_HIGHLIGHTS_ENABLED,
-		BetterRightClickConfig.KEY_HIGHLIGHTS_BOLD,
-		BetterRightClickConfig.KEY_HIGHLIGHT_RULES,
-		BetterRightClickConfig.KEY_TARGET_MODE,
-		BetterRightClickConfig.KEY_NPC_COLOUR,
-		BetterRightClickConfig.KEY_PLAYER_COLOUR,
-		BetterRightClickConfig.KEY_ITEM_COLOUR,
-		BetterRightClickConfig.KEY_OBJECT_COLOUR,
-		BetterRightClickConfig.KEY_OTHER_COLOUR,
-		BetterRightClickConfig.KEY_COMBAT_LEVEL_MODE,
-		BetterRightClickConfig.KEY_LOWER_LEVEL_COLOUR,
-		BetterRightClickConfig.KEY_SAME_LEVEL_COLOUR,
-		BetterRightClickConfig.KEY_HIGHER_LEVEL_COLOUR,
-		BetterRightClickConfig.KEY_TEXT_OFFSET_X,
-		BetterRightClickConfig.KEY_BASELINE_NUDGE,
-		BetterRightClickConfig.KEY_SHOW_HIT_ROWS
+		RightClickStylerConfig.KEY_HIGHLIGHTS_ENABLED,
+		RightClickStylerConfig.KEY_HIGHLIGHTS_BOLD,
+		RightClickStylerConfig.KEY_HIGHLIGHT_RULES,
+		RightClickStylerConfig.KEY_TARGET_MODE,
+		RightClickStylerConfig.KEY_NPC_COLOUR,
+		RightClickStylerConfig.KEY_PLAYER_COLOUR,
+		RightClickStylerConfig.KEY_ITEM_COLOUR,
+		RightClickStylerConfig.KEY_OBJECT_COLOUR,
+		RightClickStylerConfig.KEY_OTHER_COLOUR,
+		RightClickStylerConfig.KEY_COMBAT_LEVEL_MODE,
+		RightClickStylerConfig.KEY_LOWER_LEVEL_COLOUR,
+		RightClickStylerConfig.KEY_SAME_LEVEL_COLOUR,
+		RightClickStylerConfig.KEY_HIGHER_LEVEL_COLOUR,
+		RightClickStylerConfig.KEY_TEXT_OFFSET_X,
+		RightClickStylerConfig.KEY_BASELINE_NUDGE,
+		RightClickStylerConfig.KEY_SHOW_HIT_ROWS
 	};
 	private static final Consumer<Color> NOTHING = c ->
 	{
 	};
 
 	private final ThemeManager themeManager;
-	private final BetterRightClickConfig config;
+	private final RightClickStylerConfig config;
 	private final ConfigManager configManager;
 	private final ColorPickerManager colorPickerManager;
 
@@ -132,7 +132,7 @@ class BetterRightClickPanel extends PluginPanel
 	private long profileRevision;
 
 	@Inject
-	BetterRightClickPanel(LocalPlayerSnapshot localPlayer, ThemeManager themeManager, BetterRightClickConfig config,
+	RightClickStylerPanel(LocalPlayerSnapshot localPlayer, ThemeManager themeManager, RightClickStylerConfig config,
 		ConfigManager configManager, ColorPickerManager colorPickerManager)
 	{
 		this.themeManager = themeManager;
@@ -523,8 +523,8 @@ class BetterRightClickPanel extends PluginPanel
 	{
 		CollapsibleSection section = new CollapsibleSection("Action highlights", "Highlight specific menu options", false);
 
-		section.addRow(row("Enabled", globalCheckBox(config::highlightsEnabled, BetterRightClickConfig.KEY_HIGHLIGHTS_ENABLED)));
-		section.addRow(row("Bold", globalCheckBox(config::highlightsBold, BetterRightClickConfig.KEY_HIGHLIGHTS_BOLD)));
+		section.addRow(row("Enabled", globalCheckBox(config::highlightsEnabled, RightClickStylerConfig.KEY_HIGHLIGHTS_ENABLED)));
+		section.addRow(row("Bold", globalCheckBox(config::highlightsBold, RightClickStylerConfig.KEY_HIGHLIGHTS_BOLD)));
 
 		rulesPanel.setLayout(new DynamicGridLayout(0, 1, 0, ROW_GAP));
 		loadRules();
@@ -541,14 +541,14 @@ class BetterRightClickPanel extends PluginPanel
 	{
 		CollapsibleSection section = new CollapsibleSection("Targets", "Colour menu targets by entity type", false);
 
-		ColorJButton npc = globalColourButton(config::npcColour, "NPC colour", BetterRightClickConfig.KEY_NPC_COLOUR);
-		ColorJButton player = globalColourButton(config::playerColour, "Player colour", BetterRightClickConfig.KEY_PLAYER_COLOUR);
-		ColorJButton item = globalColourButton(config::itemColour, "Item colour", BetterRightClickConfig.KEY_ITEM_COLOUR);
-		ColorJButton object = globalColourButton(config::objectColour, "Object colour", BetterRightClickConfig.KEY_OBJECT_COLOUR);
-		ColorJButton other = globalColourButton(config::otherColour, "Other colour", BetterRightClickConfig.KEY_OTHER_COLOUR);
+		ColorJButton npc = globalColourButton(config::npcColour, "NPC colour", RightClickStylerConfig.KEY_NPC_COLOUR);
+		ColorJButton player = globalColourButton(config::playerColour, "Player colour", RightClickStylerConfig.KEY_PLAYER_COLOUR);
+		ColorJButton item = globalColourButton(config::itemColour, "Item colour", RightClickStylerConfig.KEY_ITEM_COLOUR);
+		ColorJButton object = globalColourButton(config::objectColour, "Object colour", RightClickStylerConfig.KEY_OBJECT_COLOUR);
+		ColorJButton other = globalColourButton(config::otherColour, "Other colour", RightClickStylerConfig.KEY_OTHER_COLOUR);
 
 		section.addRow(row("Mode", modeCombo(TargetMode.values(), config::targetMode, TargetMode.CUSTOM,
-			BetterRightClickConfig.KEY_TARGET_MODE, npc, player, item, object, other)));
+			RightClickStylerConfig.KEY_TARGET_MODE, npc, player, item, object, other)));
 		section.addRow(row("NPC", npc));
 		section.addRow(row("Player", player));
 		section.addRow(row("Item", item));
@@ -561,12 +561,12 @@ class BetterRightClickPanel extends PluginPanel
 	{
 		CollapsibleSection section = new CollapsibleSection("Combat levels", "Colour the combat level shown in targets", false);
 
-		ColorJButton lower = globalColourButton(config::lowerLevelColour, "Lower level colour", BetterRightClickConfig.KEY_LOWER_LEVEL_COLOUR);
-		ColorJButton same = globalColourButton(config::sameLevelColour, "Same level colour", BetterRightClickConfig.KEY_SAME_LEVEL_COLOUR);
-		ColorJButton higher = globalColourButton(config::higherLevelColour, "Higher level colour", BetterRightClickConfig.KEY_HIGHER_LEVEL_COLOUR);
+		ColorJButton lower = globalColourButton(config::lowerLevelColour, "Lower level colour", RightClickStylerConfig.KEY_LOWER_LEVEL_COLOUR);
+		ColorJButton same = globalColourButton(config::sameLevelColour, "Same level colour", RightClickStylerConfig.KEY_SAME_LEVEL_COLOUR);
+		ColorJButton higher = globalColourButton(config::higherLevelColour, "Higher level colour", RightClickStylerConfig.KEY_HIGHER_LEVEL_COLOUR);
 
 		section.addRow(row("Mode", modeCombo(CombatLevelMode.values(), config::combatLevelMode, CombatLevelMode.CUSTOM,
-			BetterRightClickConfig.KEY_COMBAT_LEVEL_MODE, lower, same, higher)));
+			RightClickStylerConfig.KEY_COMBAT_LEVEL_MODE, lower, same, higher)));
 		section.addRow(row("Lower level", lower));
 		section.addRow(row("Same level", same));
 		section.addRow(row("Higher level", higher));
@@ -578,11 +578,11 @@ class BetterRightClickPanel extends PluginPanel
 		CollapsibleSection section = new CollapsibleSection("Advanced", "Geometry and debugging", true);
 
 		section.addRow(row("Text offset X", globalIntSpinner(() -> Limits.textOffsetX(config),
-			Limits.MIN_TEXT_OFFSET_X, Limits.MAX_TEXT_OFFSET_X, BetterRightClickConfig.KEY_TEXT_OFFSET_X)));
+			Limits.MIN_TEXT_OFFSET_X, Limits.MAX_TEXT_OFFSET_X, RightClickStylerConfig.KEY_TEXT_OFFSET_X)));
 		section.addRow(row("Baseline nudge", globalIntSpinner(() -> Limits.baselineNudge(config),
-			Limits.MIN_BASELINE_NUDGE, Limits.MAX_BASELINE_NUDGE, BetterRightClickConfig.KEY_BASELINE_NUDGE)));
+			Limits.MIN_BASELINE_NUDGE, Limits.MAX_BASELINE_NUDGE, RightClickStylerConfig.KEY_BASELINE_NUDGE)));
 
-		section.addRow(row("Show hit rows", globalCheckBox(config::showHitRows, BetterRightClickConfig.KEY_SHOW_HIT_ROWS)));
+		section.addRow(row("Show hit rows", globalCheckBox(config::showHitRows, RightClickStylerConfig.KEY_SHOW_HIT_ROWS)));
 
 		JButton reset = new JButton("Reset all settings");
 		reset.addActionListener(e -> promptResetAll());
@@ -596,7 +596,7 @@ class BetterRightClickPanel extends PluginPanel
 	 */
 	private void setGlobal(String key, Object value)
 	{
-		configManager.setConfiguration(BetterRightClickConfig.GROUP, key, value);
+		configManager.setConfiguration(RightClickStylerConfig.GROUP, key, value);
 		preview.refresh();
 	}
 
@@ -702,7 +702,7 @@ class BetterRightClickPanel extends PluginPanel
 			}
 			sb.append(rule.option.trim()).append('=').append(hex(rule.colour));
 		}
-		setGlobal(BetterRightClickConfig.KEY_HIGHLIGHT_RULES, sb.toString());
+		setGlobal(RightClickStylerConfig.KEY_HIGHLIGHT_RULES, sb.toString());
 	}
 
 	private void loadRules()
@@ -964,7 +964,7 @@ class BetterRightClickPanel extends PluginPanel
 		}
 		for (String key : GLOBAL_SETTING_KEYS)
 		{
-			configManager.unsetConfiguration(BetterRightClickConfig.GROUP, key);
+			configManager.unsetConfiguration(RightClickStylerConfig.GROUP, key);
 		}
 		themeManager.applyTheme(BuiltInThemes.DEFAULT_ID);
 
