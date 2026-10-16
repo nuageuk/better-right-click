@@ -268,19 +268,7 @@ class BetterRightClickPanel extends PluginPanel
 		JPanel container = new JPanel();
 		container.setLayout(new DynamicGridLayout(0, 1, 0, ROW_GAP));
 
-		themeCombo.setRenderer(new DefaultListCellRenderer()
-		{
-			@Override
-			public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus)
-			{
-				Theme theme = value instanceof Theme ? (Theme) value : null;
-				String text = theme == null ? "" : theme.builtIn ? "🔒 " + theme.name : theme.name;
-				JComponent renderer = (JComponent) super.getListCellRendererComponent(
-					list, text, index, isSelected, cellHasFocus);
-				renderer.putClientProperty("html.disable", Boolean.TRUE);
-				return renderer;
-			}
-		});
+		themeCombo.setRenderer(themeListCellRenderer());
 		themeCombo.addActionListener(e ->
 		{
 			if (refreshing)
@@ -333,6 +321,22 @@ class BetterRightClickPanel extends PluginPanel
 		container.add(buttons);
 
 		return container;
+	}
+
+	static DefaultListCellRenderer themeListCellRenderer()
+	{
+		return new DefaultListCellRenderer()
+		{
+			@Override
+			public Component getListCellRendererComponent(JList<?> list, Object value, int index,
+				boolean isSelected, boolean cellHasFocus)
+			{
+				putClientProperty("html.disable", Boolean.TRUE);
+				Theme theme = value instanceof Theme ? (Theme) value : null;
+				String text = theme == null ? "" : theme.builtIn ? "🔒 " + theme.name : theme.name;
+				return super.getListCellRendererComponent(list, text, index, isSelected, cellHasFocus);
+			}
+		};
 	}
 
 	private static JButton compact(JButton button)
