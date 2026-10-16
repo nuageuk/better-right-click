@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.BiConsumer;
+import java.util.function.Supplier;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import lombok.extern.slf4j.Slf4j;
@@ -18,11 +19,11 @@ import net.runelite.client.config.ConfigManager;
 /**
  * Owns the built-in and user themes, which theme is active, and the "working copy" that the overlay
  * and the sidebar preview both render live as the user edits. User themes are saved as JSON in
- * the hidden {@code userThemes}/{@code activeTheme} config keys.
+ * the {@code userThemes} config key and hidden {@code activeTheme} config item.
  * <p>
- * Everything except {@link #effectiveTheme()} is only touched from the EDT (the panel). The overlay
- * reads {@link #effectiveTheme()} on the client thread; {@link Theme} is immutable and the reference
- * is volatile, so it always sees a complete theme.
+ * After startup, everything except {@link #effectiveTheme()} is only touched from the EDT (the
+ * panel). The overlay reads {@link #effectiveTheme()} on the client thread; {@link Theme} is
+ * immutable and the reference is volatile, so it always sees a complete theme.
  */
 @Slf4j
 @Singleton
@@ -36,6 +37,7 @@ class ThemeManager
 	private static final String ERROR_TOO_LONG = "That text is too long to be an exported theme.";
 	private static final String ERROR_INVALID = "That doesn't look like a valid exported theme.";
 
+	private final Supplier<String> themesReader;
 	private final BiConsumer<String, String> configWriter;
 	private final BetterRightClickConfig config;
 	private final Gson gson;
@@ -47,11 +49,15 @@ class ThemeManager
 	@Inject
 	ThemeManager(ConfigManager configManager, BetterRightClickConfig config, Gson gson)
 	{
-		this((key, value) -> configManager.setConfiguration(BetterRightClickConfig.GROUP, key, value), config, gson);
+		this(() -> configManager.getConfiguration(BetterRightClickConfig.GROUP,
+			BetterRightClickConfig.KEY_USER_THEMES),
+			(key, value) -> configManager.setConfiguration(BetterRightClickConfig.GROUP, key, value), config, gson);
 	}
 
-	ThemeManager(BiConsumer<String, String> configWriter, BetterRightClickConfig config, Gson gson)
+	ThemeManager(Supplier<String> themesReader, BiConsumer<String, String> configWriter,
+		BetterRightClickConfig config, Gson gson)
 	{
+		this.themesReader = themesReader;
 		this.configWriter = configWriter;
 		this.config = config;
 		this.gson = gson;
@@ -239,7 +245,7 @@ class ThemeManager
 		userThemes.clear();
 		try
 		{
-			StoredTheme[] stored = gson.fromJson(config.userThemes(), StoredTheme[].class);
+			StoredTheme[] stored = gson.fromJson(themesReader.get(), StoredTheme[].class);
 			if (stored != null)
 			{
 				for (StoredTheme s : stored)

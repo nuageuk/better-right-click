@@ -14,6 +14,7 @@ public interface BetterRightClickConfig extends Config
 {
 	String GROUP = "betterrightclick";
 
+	// Stored directly through ConfigManager so RuneLite's configuration Reset preserves saved themes.
 	String KEY_USER_THEMES = "userThemes";
 	String KEY_ACTIVE_THEME = "activeTheme";
 	String KEY_HIGHLIGHTS_ENABLED = "highlightsEnabled";
@@ -42,12 +43,6 @@ public interface BetterRightClickConfig extends Config
 	default boolean showSidebarButton()
 	{
 		return true;
-	}
-
-	@ConfigItem(keyName = KEY_USER_THEMES, name = "", description = "", hidden = true)
-	default String userThemes()
-	{
-		return "[]";
 	}
 
 	@ConfigItem(keyName = KEY_ACTIVE_THEME, name = "", description = "", hidden = true)

@@ -2,6 +2,10 @@ package com.betterrightclick;
 
 import com.google.gson.Gson;
 import java.awt.Color;
+import java.lang.reflect.Method;
+import java.util.HashMap;
+import java.util.Map;
+import net.runelite.client.config.ConfigItem;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
@@ -55,8 +59,8 @@ public class ThemeManagerTest
 		manager.setWorking(manager.effectiveTheme().withOpacity(51));
 		int writesBeforeReload = config.writes;
 
-		config.userThemes = "[]";
-		config.activeTheme = BuiltInThemes.DEFAULT_ID;
+		config.current().values.put(BetterRightClickConfig.KEY_USER_THEMES, "[]");
+		config.current().values.put(BetterRightClickConfig.KEY_ACTIVE_THEME, BuiltInThemes.DEFAULT_ID);
 		manager.reload();
 
 		assertEquals(writesBeforeReload, config.writes);
@@ -66,40 +70,143 @@ public class ThemeManagerTest
 		assertTrue(manager.userThemes().isEmpty());
 	}
 
+	@Test
+	public void persistedThemesUseOriginalKeyAndSurviveConfigurationReset()
+	{
+		TestConfig config = new TestConfig();
+		config.current().showSidebarButton = false;
+		config.current().highlightsEnabled = false;
+		config.current().targetMode = TargetMode.CUSTOM;
+		ThemeManager manager = manager(config);
+		assertTrue(manager.saveAsNew("Saved theme"));
+		String savedId = manager.activeId();
+
+		assertTrue(config.current().values.containsKey(BetterRightClickConfig.KEY_USER_THEMES));
+		config.resetAnnotatedConfiguration();
+		manager.reload();
+
+		assertEquals(BuiltInThemes.DEFAULT_ID, manager.activeId());
+		assertTrue(manager.active().builtIn);
+		assertEquals(1, manager.userThemes().size());
+		assertEquals(savedId, manager.userThemes().get(0).id);
+		assertTrue(config.showSidebarButton());
+		assertTrue(config.highlightsEnabled());
+		assertEquals(TargetMode.GAME, config.targetMode());
+	}
+
+	@Test
+	public void userThemesAreNotAnAnnotatedResetItem()
+	{
+		for (Method method : BetterRightClickConfig.class.getDeclaredMethods())
+		{
+			ConfigItem item = method.getAnnotation(ConfigItem.class);
+			if (item != null)
+			{
+				assertNotEquals(BetterRightClickConfig.KEY_USER_THEMES, item.keyName());
+			}
+		}
+	}
+
+	@Test
+	public void reloadKeepsProfilesIsolated()
+	{
+		TestConfig config = new TestConfig();
+		ThemeManager manager = manager(config);
+		assertTrue(manager.saveAsNew("Profile one"));
+		String profileOneId = manager.activeId();
+
+		config.switchProfile("two");
+		manager.reload();
+		assertTrue(manager.userThemes().isEmpty());
+		assertEquals(BuiltInThemes.DEFAULT_ID, manager.activeId());
+		assertTrue(manager.saveAsNew("Profile two"));
+		String profileTwoId = manager.activeId();
+
+		config.switchProfile("one");
+		manager.reload();
+		assertEquals(profileOneId, manager.activeId());
+		assertEquals(profileOneId, manager.userThemes().get(0).id);
+		assertNotEquals(profileTwoId, manager.userThemes().get(0).id);
+		assertFalse(manager.isEdited());
+	}
+
 	private static ThemeManager manager(TestConfig config)
 	{
-		return new ThemeManager(config::write, config, new Gson());
+		return new ThemeManager(config::readThemes, config::write, config, new Gson());
 	}
 
 	private static final class TestConfig implements BetterRightClickConfig
 	{
-		private String userThemes = "[]";
-		private String activeTheme = BuiltInThemes.DEFAULT_ID;
+		private final Map<String, ProfileState> profiles = new HashMap<>();
+		private String profile = "one";
 		private int writes;
 
-		@Override
-		public String userThemes()
+		private TestConfig()
 		{
-			return userThemes;
+			profiles.put(profile, new ProfileState());
 		}
 
 		@Override
 		public String activeTheme()
 		{
-			return activeTheme;
+			return current().values.getOrDefault(BetterRightClickConfig.KEY_ACTIVE_THEME,
+				BuiltInThemes.DEFAULT_ID);
+		}
+
+		@Override
+		public boolean showSidebarButton()
+		{
+			return current().showSidebarButton;
+		}
+
+		@Override
+		public boolean highlightsEnabled()
+		{
+			return current().highlightsEnabled;
+		}
+
+		@Override
+		public TargetMode targetMode()
+		{
+			return current().targetMode;
+		}
+
+		private String readThemes()
+		{
+			return current().values.getOrDefault(BetterRightClickConfig.KEY_USER_THEMES, "[]");
 		}
 
 		private void write(String key, String value)
 		{
 			writes++;
-			if (BetterRightClickConfig.KEY_USER_THEMES.equals(key))
-			{
-				userThemes = value;
-			}
-			else if (BetterRightClickConfig.KEY_ACTIVE_THEME.equals(key))
-			{
-				activeTheme = value;
-			}
+			current().values.put(key, value);
 		}
+
+		private void resetAnnotatedConfiguration()
+		{
+			current().values.remove(BetterRightClickConfig.KEY_ACTIVE_THEME);
+			current().showSidebarButton = true;
+			current().highlightsEnabled = true;
+			current().targetMode = TargetMode.GAME;
+		}
+
+		private void switchProfile(String profile)
+		{
+			this.profile = profile;
+			profiles.computeIfAbsent(profile, key -> new ProfileState());
+		}
+
+		private ProfileState current()
+		{
+			return profiles.get(profile);
+		}
+	}
+
+	private static final class ProfileState
+	{
+		private final Map<String, String> values = new HashMap<>();
+		private boolean showSidebarButton = true;
+		private boolean highlightsEnabled = true;
+		private TargetMode targetMode = TargetMode.GAME;
 	}
 }

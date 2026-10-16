@@ -80,8 +80,9 @@ public class BetterRightClickPlugin extends Plugin
 	@Override
 	protected void startUp()
 	{
-		// Build the panel first: it is the step that can throw, and the overlay (which consumes the
-		// vanilla menu) shouldn't be left registered if startUp fails part-way.
+		// Reload before building the panel so enabling the plugin always uses the active profile.
+		// Register the overlay only after the panel has been built successfully.
+		themeManager.reload();
 		panel = getInjector().getInstance(BetterRightClickPanel.class);
 		navigationButton = NavigationButton.builder()
 			.tooltip(NAME)
@@ -188,6 +189,40 @@ public class BetterRightClickPlugin extends Plugin
 			updateSidebarButton();
 			updateInterfaceStylesWarning();
 		});
+	}
+
+	@Override
+	public void resetConfiguration()
+	{
+		BetterRightClickPanel expectedPanel = panel;
+		Runnable reload = () ->
+		{
+			if (expectedPanel == null)
+			{
+				if (!running)
+				{
+					themeManager.reload();
+				}
+				return;
+			}
+			if (!running || panel != expectedPanel)
+			{
+				return;
+			}
+			themeManager.reload();
+			expectedPanel.reloadFromConfig();
+			updateSidebarButton();
+			updateInterfaceStylesWarning();
+		};
+
+		if (SwingUtilities.isEventDispatchThread())
+		{
+			reload.run();
+		}
+		else
+		{
+			SwingUtilities.invokeLater(reload);
+		}
 	}
 
 	@Provides
