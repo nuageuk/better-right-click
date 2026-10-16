@@ -75,6 +75,7 @@ public class BetterRightClickPlugin extends Plugin
 	// Once per session, and only once it could actually be seen. Client thread only, apart from the
 	// reset in shutDown.
 	private volatile boolean warnedAboutInterfaceStylesConflict;
+	private volatile boolean running;
 
 	@Override
 	protected void startUp()
@@ -94,11 +95,13 @@ public class BetterRightClickPlugin extends Plugin
 		overlayManager.add(menuOverlay);
 
 		updateInterfaceStylesWarning();
+		running = true;
 	}
 
 	@Override
 	protected void shutDown()
 	{
+		running = false;
 		overlayManager.remove(menuOverlay);
 		if (navigationButton != null)
 		{
@@ -165,8 +168,17 @@ public class BetterRightClickPlugin extends Plugin
 	@Subscribe
 	public void onProfileChanged(ProfileChanged event)
 	{
+		if (!running)
+		{
+			return;
+		}
+		BetterRightClickPanel expectedPanel = panel;
 		SwingUtilities.invokeLater(() ->
 		{
+			if (!running || panel != expectedPanel)
+			{
+				return;
+			}
 			themeManager.reload();
 			BetterRightClickPanel current = panel;
 			if (current != null)
