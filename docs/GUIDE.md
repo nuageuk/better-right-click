@@ -2,6 +2,8 @@
 
 Everything is set from the Better Right Click panel in the RuneLite sidebar. This guide goes through it from top to bottom.
 
+Classic is selected by default, and every built-in theme uses the RuneScape Bold font by default.
+
 ![The settings panel](images/overall-menu.png)
 
 Some settings belong to a theme and some apply everywhere:
@@ -25,7 +27,7 @@ Below the preview is the theme list and its buttons.
   - **Rename**: renames the current theme (your own themes only).
   - **Duplicate**: makes a copy of the current theme.
   - **Delete**: deletes the current theme (your own themes only). If it was active you go back to Classic.
-  - **Export**: copies the theme to your clipboard as a line of text. The More button briefly shows "Copied!".
+  - **Export**: copies the current visible look to your clipboard as a line of text, including unsaved changes. Exporting does not save those changes. The More button briefly shows "Copied!".
   - **Import**: adds a theme from text someone exported. The box is filled from your clipboard if it holds text. The imported theme is added to your list and selected.
 
 If you have unsaved changes, switching theme, Duplicate and Import ask before throwing them away. You can have up to 50 of your own themes.
@@ -104,7 +106,7 @@ These settings are for the "(level-N)" text after NPC and player names.
 - **Mode**:
   - **Game**: keeps the game's colour.
   - **Custom**: colours the level by how it compares to your own combat level.
-  - **Hide**: removes the level text, and the menu gets narrower to match.
+  - **Hide**: removes the level text. The menu keeps the game's native width.
 - **Lower level**, **Same level**, **Higher level**: the colours used in Custom mode.
 
 ## Advanced
@@ -123,6 +125,6 @@ You won't normally need these.
 - **Interface Styles' "High detail menu" and "Menu alpha" settings can conflict with this plugin.** While Interface Styles is on with High detail menu enabled or Menu alpha set below 255, the panel shows a warning at the top, and you get a chat message once after logging in. Turn off High detail menu and set Menu alpha to 255, or turn off Interface Styles, for themes to work.
 - You can hide the sidebar button with **Show sidebar button** in the plugin's settings in the RuneLite configuration panel. Turn it back on to get the panel back.
 - The plugin only changes how the menu looks. The game still decides what is in the menu and what each click does.
-- The menu is never wider than the game's own menu, so clicks always land where you expect.
-- Menus that contain a submenu are drawn by the game as normal.
+- The custom menu uses the game's native width and row positions. The plugin does not change the game's click regions.
+- Scrollable menus and menus that contain a submenu are drawn by the game as normal. Interface Styles' condensed player options therefore keep their normal submenu appearance.
 - If the menu ever fails to draw, the plugin switches to the normal game menu for the rest of the session instead of leaving you without one.

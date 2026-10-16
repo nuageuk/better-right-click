@@ -12,6 +12,8 @@ A RuneLite plugin that lets you restyle the right-click menu with your own colou
 | :---: | :---: | :---: | :---: | :---: |
 | ![Dark](docs/images/dark.png) | ![Midnight](docs/images/midnight.png) | ![Light](docs/images/light.png) | ![Glass](docs/images/glass.png) | ![Classic](docs/images/classic.png) |
 
+Classic is the default theme, using the RuneScape Bold font.
+
 ## What you can change
 
 | Area | Options |
@@ -26,9 +28,15 @@ A RuneLite plugin that lets you restyle the right-click menu with your own colou
 
 Everything is set from the Better Right Click panel in the RuneLite sidebar, with a live preview as you go.
 
+## Installation
+
+Once Better Right Click is listed on the Plugin Hub, open RuneLite's configuration panel, open the Plugin Hub, search for "Better Right Click" and install it. The sidebar button opens the theme editor.
+
 ## Setup
 
 In Interface Styles, turn off "High detail menu" and set "Menu alpha" to 255, or turn off Interface Styles, to avoid conflicts with this plugin.
+
+Better Right Click keeps the game's native menu width and click regions. Scrollable menus and menus containing submenus use the normal game appearance. This includes the submenus created by Interface Styles' condensed player options.
 
 ## Settings guide
 
